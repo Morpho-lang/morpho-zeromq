@@ -8,6 +8,8 @@
 #define ZEROMQ_PULL_CONS          "ZeroMQPull"
 #define ZEROMQ_REQUEST_CONS       "ZeroMQRequest"
 #define ZEROMQ_REPLY_CONS         "ZeroMQReply"
+#define ZEROMQ_DEALER_CONS        "ZeroMQDealer"
+#define ZEROMQ_ROUTER_CONS        "ZeroMQRouter"
 #define ZEROMQ_PUBLISH_CONS       "ZeroMQPublish"
 #define ZEROMQ_SUBSCRIBE_CONS     "ZeroMQSubscribe"
 

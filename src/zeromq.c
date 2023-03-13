@@ -92,6 +92,8 @@ ZEROMQ_CONSTRUCTOR(Push, zsock_new_push)
 ZEROMQ_CONSTRUCTOR(Pull, zsock_new_pull) 
 ZEROMQ_CONSTRUCTOR(Request, zsock_new_req) 
 ZEROMQ_CONSTRUCTOR(Reply, zsock_new_rep) 
+ZEROMQ_CONSTRUCTOR(Dealer, zsock_new_dealer)
+ZEROMQ_CONSTRUCTOR(Router, zsock_new_router)  
 ZEROMQ_CONSTRUCTOR(Publish, zsock_new_pub) 
 
 value ZeroMQSubscribe(vm *v, int nargs, value *args) { 
@@ -207,6 +209,8 @@ void zeromq_initialize(void) {
     builtin_addfunction(ZEROMQ_PULL_CONS, ZeroMQPull, BUILTIN_FLAGSEMPTY);
     builtin_addfunction(ZEROMQ_REQUEST_CONS, ZeroMQRequest, BUILTIN_FLAGSEMPTY);
     builtin_addfunction(ZEROMQ_REPLY_CONS, ZeroMQReply, BUILTIN_FLAGSEMPTY);
+    builtin_addfunction(ZEROMQ_DEALER_CONS, ZeroMQDealer, BUILTIN_FLAGSEMPTY);
+    builtin_addfunction(ZEROMQ_ROUTER_CONS, ZeroMQRouter, BUILTIN_FLAGSEMPTY);
     builtin_addfunction(ZEROMQ_PUBLISH_CONS, ZeroMQPublish, BUILTIN_FLAGSEMPTY);
     builtin_addfunction(ZEROMQ_SUBSCRIBE_CONS, ZeroMQSubscribe, BUILTIN_FLAGSEMPTY);
 
