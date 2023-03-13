@@ -59,6 +59,7 @@ objecttypedefn objectzeromqsocketdefn = {
 typedef struct {
     object obj; 
     zpoller_t *poller; 
+    dictionary readers; 
 } objectzeromqpoller; 
 
 objecttype objectzeromqpollertype;
@@ -76,11 +77,17 @@ void objectzeromqpoller_printfn(object *obj) {
 }
 
 void objectzeromqpoller_markfn(object *obj, void *v) {
+    objectzeromqpoller *poller = (objectzeromqpoller *) obj;
+    for (int i=0; i<poller->readers.capacity; i++) {
+        dictionaryentry *e = poller->readers.contents;
+        if (!MORPHO_ISNIL(e->key)) morpho_markvalue(v, e->val);
+    }
 }
 
 void objectzeromqpoller_freefn(object *obj) {
     objectzeromqpoller *poller = (objectzeromqpoller *) obj;
     if (poller->poller) zpoller_destroy(&poller->poller);
+    dictionary_clear(&poller->readers);
 } 
 
 size_t objectzeromqpoller_sizefn(object *obj) {
@@ -244,8 +251,19 @@ MORPHO_ENDCLASS
 /** Creates a new ZeroMQ poller */
 objectzeromqpoller *object_newzeromqpoller(zpoller_t *poll) {
     objectzeromqpoller *new = (objectzeromqpoller *) object_new(sizeof(objectzeromqpoller), ZEROMQ_POLLER);
-    if (new) new->poller = poll; 
+    if (new) {
+        new->poller = poll; 
+        dictionary_init(&new->readers);
+    }
     return new; 
+}
+
+/** Add a socket to a poller */
+void zeromqpoller_add(objectzeromqpoller *poll, value add) {
+    if (!ZEROMQ_ISSOCKET(add)) return; 
+    zsock_t *sock = ZEROMQ_GETSOCKET(add)->socket; 
+    zpoller_add(poll->poller, sock);
+    dictionary_insert(&poll->readers, MORPHO_OBJECT(sock), add);
 }
 
 value ZeroMQPoller(vm *v, int nargs, value *args) { 
@@ -256,8 +274,7 @@ value ZeroMQPoller(vm *v, int nargs, value *args) {
         objectzeromqpoller *poll = object_newzeromqpoller(new);
 
         for (int i=0; i<nargs; i++) {
-            value arg = MORPHO_GETARG(args, i);
-            if (ZEROMQ_ISSOCKET(arg)) zpoller_add(new, ZEROMQ_GETSOCKET(arg)->socket);
+            zeromqpoller_add(poll, MORPHO_GETARG(args, i));
         }
 
         if (poll) out = MORPHO_OBJECT(poll);
@@ -275,7 +292,8 @@ value ZeroMQPoller_wait(vm *v, int nargs, value *args) {
 
     if (nargs==1) morpho_valuetoint(MORPHO_GETARG(args, 0), &wait);
 
-    zpoller_wait(self->poller, wait);
+    zsock_t *sock = zpoller_wait(self->poller, wait);
+    if (sock) dictionary_get(&self->readers, MORPHO_OBJECT(sock), &out);
 
     return out; 
 }
