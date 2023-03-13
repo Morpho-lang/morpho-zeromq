@@ -1,6 +1,6 @@
 # morpho-zeromq
 
-Morpho interface for the ZeroMQ brokerless asynchronous network messaging library and distributed computing framework.
+Morpho extension that provides an interface to the ZeroMQ brokerless asynchronous network messaging library and distributed computing framework.
 
 ## Installation
 
