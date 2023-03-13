@@ -13,7 +13,6 @@ clean:
 
 .PHONY: install
 install: zeromq
-	mkdir -p ../lib
 	cp zeromq.dylib ../lib/zeromq.dylib
 	make clean 
 	
