@@ -3,6 +3,7 @@
 #include <morpho/builtin.h>
 
 #define ZEROMQ_SOCKETCLASSNAME    "ZeroMQSocket"
+#define ZEROMQ_POLLERCLASSNAME    "ZeroMQPoller"
 
 #define ZEROMQ_PUSH_CONS          "ZeroMQPush"
 #define ZEROMQ_PULL_CONS          "ZeroMQPull"
@@ -18,6 +19,7 @@
 #define ZEROMQ_ENDPOINT_METHOD    "endpoint"
 #define ZEROMQ_SUBSCRIBE_METHOD   "subscribe"
 #define ZEROMQ_UNSUBSCRIBE_METHOD "unsubscribe"
+#define ZEROMQ_WAIT_METHOD        "wait"
 
 #define ZEROMQ_CONSARGS           "ZMQConsArgs"
 #define ZEROMQ_CONSARGS_MSG       "Socket constructor requires an endpoint as an argument."

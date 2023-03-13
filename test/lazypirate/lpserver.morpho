@@ -1,0 +1,17 @@
+
+import zeromq 
+
+print "Starting server..."
+
+var server_endpoint = "tcp://127.0.0.1:5555"
+
+var server = ZeroMQReply(server_endpoint) 
+
+for (i in 1..3) {
+    var req = server.receive()
+    print "Server received request: ${req}"
+
+    server.send("World!") 
+}
+
+print "Ending server"

@@ -1,0 +1,22 @@
+
+import zeromq 
+
+print "Starting client..."
+
+var requestimeout = 2500 // msecs, (>1000!)
+var maxretries =  3 // Before we abandon
+var server_endpoint = "tcp://127.0.0.1:5555"
+
+var client = ZeroMQRequest(server_endpoint)
+var poller = ZeroMQPoller(client) 
+
+var sequence = 1
+
+for (retry in 1..maxretries) {
+  client.send("Hello ${sequence}") 
+  poller.wait(requestimeout) 
+  var a = client.receive() 
+  print "Client received reply: ${a}"
+}
+
+print "Ending client"

@@ -23,6 +23,9 @@ objecttype objectzeromqsockettype;
 /** Gets the object as a zeromq socket */
 #define ZEROMQ_GETSOCKET(val)   ((objectzeromqsocket *) MORPHO_GETOBJECT(val))
 
+/** Tests whether an object is an socket */
+#define ZEROMQ_ISSOCKET(val) object_istype(val, ZEROMQ_SOCKET)
+
 /** ZeroMQ socket definitions */
 void objectzeromqsocket_printfn(object *obj) {
     objectzeromqsocket *d = (objectzeromqsocket *) obj;
@@ -47,6 +50,48 @@ objecttypedefn objectzeromqsocketdefn = {
     .markfn=objectzeromqsocket_markfn,
     .freefn=objectzeromqsocket_freefn,
     .sizefn=objectzeromqsocket_sizefn
+};
+
+/* -------------------------------------------------------
+ * ZeroMQ poller object type
+ * ------------------------------------------------------- */
+
+typedef struct {
+    object obj; 
+    zpoller_t *poller; 
+} objectzeromqpoller; 
+
+objecttype objectzeromqpollertype;
+#define ZEROMQ_POLLER objectzeromqpollertype
+
+/** Tests whether an object is an socket */
+#define ZEROMQ_ISPOLLER(val) object_istype(val, ZEROMQ_POLLER)
+
+/** Gets the object as a zeromq socket */
+#define ZEROMQ_GETPOLLER(val)   ((objectzeromqpoller *) MORPHO_GETOBJECT(val))
+
+/** ZeroMQ socket definitions */
+void objectzeromqpoller_printfn(object *obj) {
+    printf("<ZeroMQPoller>");
+}
+
+void objectzeromqpoller_markfn(object *obj, void *v) {
+}
+
+void objectzeromqpoller_freefn(object *obj) {
+    objectzeromqpoller *poller = (objectzeromqpoller *) obj;
+    if (poller->poller) zpoller_destroy(&poller->poller);
+} 
+
+size_t objectzeromqpoller_sizefn(object *obj) {
+    return sizeof(objectzeromqpoller);
+}
+
+objecttypedefn objectzeromqpollerdefn = {
+    .printfn=objectzeromqpoller_printfn,
+    .markfn=objectzeromqpoller_markfn,
+    .freefn=objectzeromqpoller_freefn,
+    .sizefn=objectzeromqpoller_sizefn
 };
 
 /* -------------------------------------------------------
@@ -119,7 +164,7 @@ value ZeroMQSubscribe(vm *v, int nargs, value *args) {
 } 
 
 /* -------------------------------------------------------
- * Veneer class 
+ * Socket veneer class 
  * ------------------------------------------------------- */
 
 /** Send */
@@ -193,11 +238,59 @@ MORPHO_METHOD(ZEROMQ_ENDPOINT_METHOD, ZeroMQSocket_endpoint, BUILTIN_FLAGSEMPTY)
 MORPHO_ENDCLASS
 
 /* -------------------------------------------------------
+ * Poller veneer class 
+ * ------------------------------------------------------- */
+
+/** Creates a new ZeroMQ poller */
+objectzeromqpoller *object_newzeromqpoller(zpoller_t *poll) {
+    objectzeromqpoller *new = (objectzeromqpoller *) object_new(sizeof(objectzeromqpoller), ZEROMQ_POLLER);
+    if (new) new->poller = poll; 
+    return new; 
+}
+
+value ZeroMQPoller(vm *v, int nargs, value *args) { 
+    value out = MORPHO_NIL; 
+
+    zpoller_t *new = zpoller_new(NULL);
+    if (new) {
+        objectzeromqpoller *poll = object_newzeromqpoller(new);
+
+        for (int i=0; i<nargs; i++) {
+            value arg = MORPHO_GETARG(args, i);
+            if (ZEROMQ_ISSOCKET(arg)) zpoller_add(new, ZEROMQ_GETSOCKET(arg)->socket);
+        }
+
+        if (poll) out = MORPHO_OBJECT(poll);
+        if (MORPHO_ISOBJECT(out)) morpho_bindobjects(v, 1, &out);
+    }
+
+    return out; 
+} 
+
+value ZeroMQPoller_wait(vm *v, int nargs, value *args) { 
+    objectzeromqpoller *self = ZEROMQ_GETPOLLER(MORPHO_SELF(args));
+    value out = MORPHO_NIL; 
+
+    int wait = -1; // Indefinitely by default
+
+    if (nargs==1) morpho_valuetoint(MORPHO_GETARG(args, 0), &wait);
+
+    zpoller_wait(self->poller, wait);
+
+    return out; 
+}
+
+MORPHO_BEGINCLASS(ZeroMQPoller)
+MORPHO_METHOD(ZEROMQ_WAIT_METHOD, ZeroMQPoller_wait, BUILTIN_FLAGSEMPTY)
+MORPHO_ENDCLASS
+
+/* -------------------------------------------------------
  * Initialization and finalization
  * ------------------------------------------------------- */
 
 void zeromq_initialize(void) { 
     objectzeromqsockettype=object_addtype(&objectzeromqsocketdefn);
+    objectzeromqpollertype=object_addtype(&objectzeromqpollerdefn);
     
     objectstring objclassname = MORPHO_STATICSTRING(OBJECT_CLASSNAME);
     value objclass = builtin_findclass(MORPHO_OBJECT(&objclassname));
@@ -213,6 +306,11 @@ void zeromq_initialize(void) {
     builtin_addfunction(ZEROMQ_ROUTER_CONS, ZeroMQRouter, BUILTIN_FLAGSEMPTY);
     builtin_addfunction(ZEROMQ_PUBLISH_CONS, ZeroMQPublish, BUILTIN_FLAGSEMPTY);
     builtin_addfunction(ZEROMQ_SUBSCRIBE_CONS, ZeroMQSubscribe, BUILTIN_FLAGSEMPTY);
+
+    value zeromqpollerclass=builtin_addclass(ZEROMQ_POLLERCLASSNAME, MORPHO_GETCLASSDEFINITION(ZeroMQPoller), objclass);
+    object_setveneerclass(ZEROMQ_POLLER, zeromqpollerclass);
+
+    builtin_addfunction(ZEROMQ_POLLERCLASSNAME, ZeroMQPoller, BUILTIN_FLAGSEMPTY);
 
     morpho_defineerror(ZEROMQ_CONSARGS, ERROR_HALT, ZEROMQ_CONSARGS_MSG);
     morpho_defineerror(ZEROMQ_ERR, ERROR_HALT, ZEROMQ_ERR_MSG);
