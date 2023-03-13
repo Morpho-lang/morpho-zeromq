@@ -8,21 +8,41 @@ var maxretries =  3 // Before we abandon
 var server_endpoint = "tcp://127.0.0.1:5555"
 
 var client = ZeroMQRequest(server_endpoint)
-var poller = ZeroMQPoller(client) 
 
-for (i in 1..6) {
-  for (retry in 1..maxretries) {
-    client.send("Hello ${i}") 
-    var rcvd = poller.wait(requestimeout) 
+var seq = 0
+var retries_left = maxretries
+
+while (retries_left>0) {
+  seq+=1
+  client.send("Hello ${seq}")
+  var expect_reply = true 
+
+  while (expect_reply) {
+    var poller = ZeroMQPoller(client) 
+    var rcvd = poller.wait(requestimeout)
+
     if (rcvd==client) {
       var a = client.receive() 
       var j = Int(a.split(" ")[1])
-      print "Client received reply: ${j} (expecting ${i})"
-      break 
+      if (j==seq) {
+        print "C: Server replied ${j} - ok"
+        expect_reply = false 
+        retries_left = maxretries
+      } else print "C: Malformed reply from server '${a}'"
     } else {
-      print "Timed out"
+      retries_left-=1
+      if (retries_left==0) {
+        print "C: Server offline"
+        break 
+      } else {
+        print "C: Reconnecting to server [${retries_left} tries left]..."
+        client = ZeroMQRequest(server_endpoint)
+        client.send("Hello ${seq}")
+      }
     }
   }
 }
 
-print "Ending client"
+client.send("Kill")
+
+print "C: Ending client"
