@@ -32,7 +32,7 @@ Minimal client and server communicating via interprocess communication:
 [tagpublisher]: # (publisher)
 [tagsubscriber]: # (subscriber)
 
-The Publisher/subscriber pattern is used for data distribution. It involves a publisher, who creates a `ZeroMQPublisher` object and broadcasts messages, and any number of subscribers, who each create a `ZeroMQSubscriber` object and receive messages. 
+The Publisher/subscriber pattern is used for data distribution. It involves a publisher, who creates a `ZeroMQPublisher` object and broadcasts messages, and any number of subscribers, who each create a `ZeroMQSubscriber` object and receive messages.
 
 ## Push-Pull
 [tagpush]: # (push)
@@ -42,4 +42,4 @@ The push/pull message exhange pattern is used for parallel task distribution. It
 
 ## Dealer-Router
 
-Provides a non-blocking request-reply pattern. 
+Provides a non-blocking request-reply pattern implemented by the `ZeroMQDealer` and `ZeroMQRouter` classes. 
