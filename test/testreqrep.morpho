@@ -1,0 +1,3 @@
+
+system("morpho5 reqrep/client.morpho &")
+system("morpho5 reqrep/server.morpho &")

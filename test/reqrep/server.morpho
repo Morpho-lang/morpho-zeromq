@@ -1,0 +1,15 @@
+
+import zeromq 
+
+print "Starting req/rep server..."
+
+var rep = ZeroMQReply("tcp://127.0.0.1:5555") 
+print rep 
+
+for (i in 1..5) {
+    var a = rep.receive() 
+    print "Server received: ${a}"
+    rep.send("World ${i}! ")
+}
+
+print "Ending req/rep server..."

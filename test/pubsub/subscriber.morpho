@@ -1,0 +1,18 @@
+
+import zeromq 
+
+print "Starting subscriber..."
+
+var sub = ZeroMQSubscribe("tcp://127.0.0.1:5555") 
+sub.subscribe("1001") 
+print sub 
+
+var temp = 0 
+for (i in 1..100) {
+  var a = sub.receive() 
+  print a 
+  temp+=Float(a.split(" ")[2])
+}
+print "Average temp ${temp/100}"
+
+print "Ending subscriber..."
