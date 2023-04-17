@@ -3,7 +3,7 @@ import zeromq
 
 print "Starting req/rep client..."
 
-var req = ZeroMQRequest("tcp://127.0.0.1:5555") 
+var req = ZMQRequest("tcp://127.0.0.1:5555") 
 print req 
 
 for (i in 1..5) {

@@ -7,7 +7,7 @@ var requestimeout = 2500 // msecs, (>1000!)
 var maxretries =  3 // Before we abandon
 var server_endpoint = "tcp://127.0.0.1:5555"
 
-var client = ZeroMQRequest(server_endpoint)
+var client = ZMQRequest(server_endpoint)
 
 var seq = 0
 var retries_left = maxretries
@@ -18,7 +18,7 @@ while (retries_left>0) {
   var expect_reply = true 
 
   while (expect_reply) {
-    var poller = ZeroMQPoller(client) 
+    var poller = ZMQPoller(client) 
     var rcvd = poller.wait(requestimeout)
 
     if (rcvd==client) {
@@ -36,7 +36,7 @@ while (retries_left>0) {
         break 
       } else {
         print "C: Reconnecting to server [${retries_left} tries left]..."
-        client = ZeroMQRequest(server_endpoint)
+        client = ZMQRequest(server_endpoint)
         client.send("Hello ${seq}")
       }
     }

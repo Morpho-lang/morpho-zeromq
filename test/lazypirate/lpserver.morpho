@@ -5,7 +5,7 @@ print "Starting server..."
 
 var server_endpoint = "tcp://127.0.0.1:5555"
 
-var server = ZeroMQReply(server_endpoint) 
+var server = ZMQReply(server_endpoint) 
 
 var i = 0
 while (true) {

@@ -3,7 +3,7 @@ import zeromq
 
 print "Starting subscriber..."
 
-var sub = ZeroMQSubscribe("tcp://127.0.0.1:5555") 
+var sub = ZMQSubscriber("tcp://127.0.0.1:5555") 
 sub.subscribe("1001") 
 print sub 
 

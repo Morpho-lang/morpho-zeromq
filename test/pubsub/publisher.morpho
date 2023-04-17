@@ -3,7 +3,7 @@ import zeromq
 
 print "Starting publisher..."
 
-var pub = ZeroMQPublish("tcp://127.0.0.1:5555") 
+var pub = ZMQPublisher("tcp://127.0.0.1:5555") 
 print pub 
 
 for (i in 1..20000) {

@@ -30,7 +30,7 @@ objecttype objectzeromqsockettype;
 void objectzeromqsocket_printfn(object *obj) {
     objectzeromqsocket *d = (objectzeromqsocket *) obj;
     const char *type = zsock_type_str(d->socket);
-    printf("<ZeroMQSocket: %s>", type);
+    printf("<%s: %s>", ZEROMQ_SOCKETCLASSNAME, type);
 }
 
 void objectzeromqsocket_markfn(object *obj, void *v) {
@@ -140,15 +140,9 @@ objectzeromqsocket *object_newzeromqsocket(zsock_t *socket) {
     return out; \
 } 
 
-ZEROMQ_CONSTRUCTOR(Push, zsock_new_push) 
-ZEROMQ_CONSTRUCTOR(Pull, zsock_new_pull) 
-ZEROMQ_CONSTRUCTOR(Request, zsock_new_req) 
-ZEROMQ_CONSTRUCTOR(Reply, zsock_new_rep) 
-ZEROMQ_CONSTRUCTOR(Dealer, zsock_new_dealer)
-ZEROMQ_CONSTRUCTOR(Router, zsock_new_router)  
-ZEROMQ_CONSTRUCTOR(Publish, zsock_new_pub) 
+ZEROMQ_CONSTRUCTOR(Publisher, zsock_new_pub) 
 
-value ZeroMQSubscribe(vm *v, int nargs, value *args) { 
+value ZeroMQSubscriber(vm *v, int nargs, value *args) { 
     value out = MORPHO_NIL; 
     char *subs = ""; 
 
@@ -170,9 +164,49 @@ value ZeroMQSubscribe(vm *v, int nargs, value *args) {
     return out; 
 } 
 
+ZEROMQ_CONSTRUCTOR(Request, zsock_new_req) 
+ZEROMQ_CONSTRUCTOR(Reply, zsock_new_rep) 
+ZEROMQ_CONSTRUCTOR(Dealer, zsock_new_dealer)
+ZEROMQ_CONSTRUCTOR(Router, zsock_new_router)  
+ZEROMQ_CONSTRUCTOR(Push, zsock_new_push) 
+ZEROMQ_CONSTRUCTOR(Pull, zsock_new_pull) 
+ZEROMQ_CONSTRUCTOR(XPublisher, zsock_new_xpub) 
+ZEROMQ_CONSTRUCTOR(XSubscriber, zsock_new_xsub) 
+ZEROMQ_CONSTRUCTOR(Pair, zsock_new_pair) 
+
 /* -------------------------------------------------------
  * Socket veneer class 
  * ------------------------------------------------------- */
+
+#define ZEROMQ_CONNECTMETHOD(name, connectfunc) value ZeroMQSocket_##name(vm *v, int nargs, value *args) { \
+    objectzeromqsocket *sock = ZEROMQ_GETSOCKET(MORPHO_SELF(args)); \
+\
+    if (nargs==1 && MORPHO_ISSTRING(MORPHO_GETARG(args, 0))) { \
+        int ret=connectfunc(sock->socket, "%s", MORPHO_GETCSTRING(MORPHO_GETARG(args, 0))); \
+        if (ret==-1) zeromq_error(v); \
+    } \
+\
+    return MORPHO_NIL; \
+}
+
+ZEROMQ_CONNECTMETHOD(bind, zsock_bind)
+ZEROMQ_CONNECTMETHOD(unbind, zsock_unbind)
+ZEROMQ_CONNECTMETHOD(connect, zsock_connect)
+ZEROMQ_CONNECTMETHOD(disconnect, zsock_disconnect)
+
+/** Determine the endpoint */
+value ZeroMQSocket_endpoint(vm *v, int nargs, value *args) {
+    objectzeromqsocket *sock = ZEROMQ_GETSOCKET(MORPHO_SELF(args));
+    value out = MORPHO_NIL; 
+
+    const char *ep = zsock_endpoint(sock->socket);
+    if (ep) {
+        out = object_stringfromcstring(ep, strlen(ep));
+        if (MORPHO_ISOBJECT(out)) morpho_bindobjects(v, 1, &out);
+    }
+
+    return out; 
+}
 
 /** Send */
 value ZeroMQSocket_send(vm *v, int nargs, value *args) {
@@ -200,20 +234,6 @@ value ZeroMQSocket_receive(vm *v, int nargs, value *args) {
     return out;
 }
 
-/** Determine the endpoint */
-value ZeroMQSocket_endpoint(vm *v, int nargs, value *args) {
-    objectzeromqsocket *sock = ZEROMQ_GETSOCKET(MORPHO_SELF(args));
-    value out = MORPHO_NIL; 
-
-    const char *ep = zsock_endpoint(sock->socket);
-    if (ep) {
-        out = object_stringfromcstring(ep, strlen(ep));
-        if (MORPHO_ISOBJECT(out)) morpho_bindobjects(v, 1, &out);
-    }
-
-    return out; 
-}
-
 /** Subscribe */
 value ZeroMQSocket_subscribe(vm *v, int nargs, value *args) {
     objectzeromqsocket *sock = ZEROMQ_GETSOCKET(MORPHO_SELF(args));
@@ -237,11 +257,15 @@ value ZeroMQSocket_unsubscribe(vm *v, int nargs, value *args) {
 }
 
 MORPHO_BEGINCLASS(ZeroMQSocket)
+MORPHO_METHOD(ZEROMQ_BIND_METHOD, ZeroMQSocket_bind, BUILTIN_FLAGSEMPTY),
+MORPHO_METHOD(ZEROMQ_ENDPOINT_METHOD, ZeroMQSocket_endpoint, BUILTIN_FLAGSEMPTY),
+MORPHO_METHOD(ZEROMQ_UNBIND_METHOD, ZeroMQSocket_unbind, BUILTIN_FLAGSEMPTY),
+MORPHO_METHOD(ZEROMQ_CONNECT_METHOD, ZeroMQSocket_connect, BUILTIN_FLAGSEMPTY),
+MORPHO_METHOD(ZEROMQ_DISCONNECT_METHOD, ZeroMQSocket_disconnect, BUILTIN_FLAGSEMPTY),
 MORPHO_METHOD(ZEROMQ_SEND_METHOD, ZeroMQSocket_send, BUILTIN_FLAGSEMPTY),
 MORPHO_METHOD(ZEROMQ_RECEIVE_METHOD, ZeroMQSocket_receive, BUILTIN_FLAGSEMPTY),
 MORPHO_METHOD(ZEROMQ_SUBSCRIBE_METHOD, ZeroMQSocket_subscribe, BUILTIN_FLAGSEMPTY),
-MORPHO_METHOD(ZEROMQ_UNSUBSCRIBE_METHOD, ZeroMQSocket_unsubscribe, BUILTIN_FLAGSEMPTY),
-MORPHO_METHOD(ZEROMQ_ENDPOINT_METHOD, ZeroMQSocket_endpoint, BUILTIN_FLAGSEMPTY)
+MORPHO_METHOD(ZEROMQ_UNSUBSCRIBE_METHOD, ZeroMQSocket_unsubscribe, BUILTIN_FLAGSEMPTY)
 MORPHO_ENDCLASS
 
 /* -------------------------------------------------------
@@ -259,13 +283,23 @@ objectzeromqpoller *object_newzeromqpoller(zpoller_t *poll) {
 }
 
 /** Add a socket to a poller */
-void zeromqpoller_add(objectzeromqpoller *poll, value add) {
-    if (!ZEROMQ_ISSOCKET(add)) return; 
-    zsock_t *sock = ZEROMQ_GETSOCKET(add)->socket; 
-    zpoller_add(poll->poller, sock);
-    dictionary_insert(&poll->readers, MORPHO_OBJECT(sock), add);
+void zeromqpoller_add(objectzeromqpoller *poll, value sock) {
+    if (!ZEROMQ_ISSOCKET(sock)) return; 
+    zsock_t *sockt = ZEROMQ_GETSOCKET(sock)->socket; 
+    zpoller_add(poll->poller, sockt);
+    dictionary_insert(&poll->readers, MORPHO_OBJECT(sockt), sock);
 }
 
+/** Remove a socket from a poller */
+void zeromqpoller_remove(objectzeromqpoller *poll, value sock) {
+    if (!ZEROMQ_ISSOCKET(sock)) return; 
+    zsock_t *sockt = ZEROMQ_GETSOCKET(sock)->socket; 
+    if (dictionary_get(&poll->readers, MORPHO_OBJECT(sockt), NULL)) {
+        zpoller_remove(poll->poller, sockt);
+    }
+}
+
+/** Constructor function for a ZMQ Poller object */
 value ZeroMQPoller(vm *v, int nargs, value *args) { 
     value out = MORPHO_NIL; 
 
@@ -316,14 +350,17 @@ void zeromq_initialize(void) {
     value zeromqsocketclass=builtin_addclass(ZEROMQ_SOCKETCLASSNAME, MORPHO_GETCLASSDEFINITION(ZeroMQSocket), objclass);
     object_setveneerclass(ZEROMQ_SOCKET, zeromqsocketclass);
 
-    builtin_addfunction(ZEROMQ_PUSH_CONS, ZeroMQPush, BUILTIN_FLAGSEMPTY);
-    builtin_addfunction(ZEROMQ_PULL_CONS, ZeroMQPull, BUILTIN_FLAGSEMPTY);
+    builtin_addfunction(ZEROMQ_PUBLISHER_CONS, ZeroMQPublisher, BUILTIN_FLAGSEMPTY);
+    builtin_addfunction(ZEROMQ_SUBSCRIBER_CONS, ZeroMQSubscriber, BUILTIN_FLAGSEMPTY);
     builtin_addfunction(ZEROMQ_REQUEST_CONS, ZeroMQRequest, BUILTIN_FLAGSEMPTY);
     builtin_addfunction(ZEROMQ_REPLY_CONS, ZeroMQReply, BUILTIN_FLAGSEMPTY);
     builtin_addfunction(ZEROMQ_DEALER_CONS, ZeroMQDealer, BUILTIN_FLAGSEMPTY);
     builtin_addfunction(ZEROMQ_ROUTER_CONS, ZeroMQRouter, BUILTIN_FLAGSEMPTY);
-    builtin_addfunction(ZEROMQ_PUBLISH_CONS, ZeroMQPublish, BUILTIN_FLAGSEMPTY);
-    builtin_addfunction(ZEROMQ_SUBSCRIBE_CONS, ZeroMQSubscribe, BUILTIN_FLAGSEMPTY);
+    builtin_addfunction(ZEROMQ_PUSH_CONS, ZeroMQPush, BUILTIN_FLAGSEMPTY);
+    builtin_addfunction(ZEROMQ_PULL_CONS, ZeroMQPull, BUILTIN_FLAGSEMPTY);
+    builtin_addfunction(ZEROMQ_XPUBLISHER_CONS, ZeroMQXPublisher, BUILTIN_FLAGSEMPTY);
+    builtin_addfunction(ZEROMQ_XSUBSCRIBER_CONS, ZeroMQXSubscriber, BUILTIN_FLAGSEMPTY);
+    builtin_addfunction(ZEROMQ_PAIR_CONS, ZeroMQPair, BUILTIN_FLAGSEMPTY);
 
     value zeromqpollerclass=builtin_addclass(ZEROMQ_POLLERCLASSNAME, MORPHO_GETCLASSDEFINITION(ZeroMQPoller), objclass);
     object_setveneerclass(ZEROMQ_POLLER, zeromqpollerclass);
