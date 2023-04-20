@@ -34,7 +34,7 @@
 #define ZEROMQ_UNSUBSCRIBE_METHOD "unsubscribe"
 
 #define ZEROMQ_CONSARGS           "ZMQConsArgs"
-#define ZEROMQ_CONSARGS_MSG       "Socket constructor requires an endpoint as an argument."
+#define ZEROMQ_CONSARGS_MSG       "Socket constructor argument should be an endpoint."
 
 #define ZEROMQ_ERR                "ZMQErr"
 #define ZEROMQ_ERR_MSG            "ZeroMQ error: %s."
