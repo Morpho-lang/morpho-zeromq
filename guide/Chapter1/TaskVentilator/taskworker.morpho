@@ -1,0 +1,21 @@
+// Task worker
+// Connects PULL socket to tcp://localhost:5557
+// Collects workloads from ventilator via that socket
+// Connects PUSH socket to tcp://localhost:5558
+// Sends results to sink via that socket
+
+import zeromq 
+
+//  Socket to receive messages on
+var receiver = ZMQPull()
+receiver.connect("tcp://localhost:5557") // Default action is bind, so need to subvert that 
+
+//  Socket to send messages to
+var sender = ZMQPush("tcp://localhost:5558")
+
+while (true) {
+    var message = receiver.receive()
+    print message
+    // Wait for Int(message)
+    sender.send("")
+}

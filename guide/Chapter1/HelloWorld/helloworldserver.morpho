@@ -1,0 +1,11 @@
+// Hello World Server
+
+import zeromq 
+
+var responder = ZMQReply("tcp://*:5555")
+
+while (true) {
+    var message = responder.receive() 
+    print "[Server] Received request ${message}"
+    responder.send("World")
+}

@@ -1,0 +1,24 @@
+// Weather Update Client
+// Connects Subscriber socket to tcp://localhost:5556
+// Collects weather updates and finds avg temp in zipcode
+
+import zeromq 
+
+print "Collecting updates from weather server..."
+
+var zipFilter = 10001 // NYC 
+var updateNumber = 10 // Process 5 updates
+
+print zipFilter 
+
+var sub = ZMQSubscriber("tcp://localhost:5556", "${zipFilter}") // Open Subscriber with a subscription
+
+var totaltemp = 0 
+
+for (update in 1..updateNumber) {
+    var message = sub.receive()
+    print message
+    totaltemp+=Float(message.split(" ")[1])
+}
+
+print "Average temperature for zipcode ${zipFilter} is ${totaltemp/updateNumber}"

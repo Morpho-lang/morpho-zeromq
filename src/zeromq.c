@@ -124,43 +124,48 @@ objectzeromqsocket *object_newzeromqsocket(zsock_t *socket) {
 /** Generic constructor function */
 #define ZEROMQ_CONSTRUCTOR(name, consfunc) value ZeroMQ##name (vm *v, int nargs, value *args) { \
     value out = MORPHO_NIL; \
+    char *endpoint = NULL; \
     if (nargs==1 && MORPHO_ISSTRING(MORPHO_GETARG(args, 0))) { \
-        zsock_t *sock = consfunc(MORPHO_GETCSTRING(MORPHO_GETARG(args, 0))); \
-        if (sock) { \
-            objectzeromqsocket *new = object_newzeromqsocket(sock); \
-            if (new) { \
-                out = MORPHO_OBJECT(new); \
-                morpho_bindobjects(v, 1, &out); \
-            } else { \
-                zsock_destroy(&sock); \
-                morpho_runtimeerror(v, ERROR_ALLOCATIONFAILED); \
-            } \
-        } else zeromq_error(v);\
-    } else morpho_runtimeerror(v, ZEROMQ_CONSARGS); \
+        endpoint = MORPHO_GETCSTRING(MORPHO_GETARG(args, 0)); \
+    } else if (nargs!=0) morpho_runtimeerror(v, ZEROMQ_CONSARGS); \
+    zsock_t *sock = consfunc(endpoint); \
+    if (sock) { \
+        objectzeromqsocket *new = object_newzeromqsocket(sock); \
+        if (new) { \
+            out = MORPHO_OBJECT(new); \
+            morpho_bindobjects(v, 1, &out); \
+        } else { \
+            zsock_destroy(&sock); \
+            morpho_runtimeerror(v, ERROR_ALLOCATIONFAILED); \
+        } \
+    } else zeromq_error(v); \
     return out; \
 } 
 
 ZEROMQ_CONSTRUCTOR(Publisher, zsock_new_pub) 
 
 value ZeroMQSubscriber(vm *v, int nargs, value *args) { 
-    value out = MORPHO_NIL; 
-    char *subs = ""; 
+    value out = MORPHO_NIL;
+    char *subs = "";
+    char *endpoint = NULL;
 
     if (nargs>0 && MORPHO_ISSTRING(MORPHO_GETARG(args, 0))) { 
-        if (nargs==2 && MORPHO_ISSTRING(MORPHO_GETARG(args, 1))) subs = MORPHO_GETCSTRING(MORPHO_GETARG(args, 1)); 
+        endpoint = MORPHO_GETCSTRING(MORPHO_GETARG(args, 0));
+    } else morpho_runtimeerror(v, ZEROMQ_CONSARGS);
+    
+    if (nargs==2 && MORPHO_ISSTRING(MORPHO_GETARG(args, 1))) subs = MORPHO_GETCSTRING(MORPHO_GETARG(args, 1)); 
 
-        zsock_t *sock = zsock_new_sub(MORPHO_GETCSTRING(MORPHO_GETARG(args, 0)), subs); 
-        if (sock) { 
-            objectzeromqsocket *new = object_newzeromqsocket(sock); 
-            if (new) { 
-                out = MORPHO_OBJECT(new); 
-                morpho_bindobjects(v, 1, &out); 
-            } else { 
-                zsock_destroy(&sock); 
-                morpho_runtimeerror(v, ERROR_ALLOCATIONFAILED); 
-            } 
-        } else zeromq_error(v);
-    } else morpho_runtimeerror(v, ZEROMQ_CONSARGS); 
+    zsock_t *sock = zsock_new_sub(endpoint, subs); 
+    if (sock) { 
+        objectzeromqsocket *new = object_newzeromqsocket(sock); 
+        if (new) { 
+            out = MORPHO_OBJECT(new); 
+            morpho_bindobjects(v, 1, &out); 
+        } else { 
+            zsock_destroy(&sock); 
+            morpho_runtimeerror(v, ERROR_ALLOCATIONFAILED); 
+        } 
+    } else zeromq_error(v);
     return out; 
 } 
 

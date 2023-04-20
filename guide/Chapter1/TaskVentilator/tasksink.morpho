@@ -1,0 +1,24 @@
+//  Task sink
+//  Binds PULL socket to tcp://localhost:5558
+//  Collects results from workers via that socket
+
+import zeromq 
+
+var receiver = ZMQPull("tcp://localhost:5558")
+
+//  Wait for start of batch
+receiver.receive() 
+
+var start_time = System.clock() 
+
+//  Process 100 confirmations
+for (task_nbr in 1..100) {
+    receiver.receive()
+    if (mod(task_nbr, 10) == 0) {
+        print ":"
+    } else {
+        print "."
+    }
+} 
+
+print "Total elapsed time: ${1000*(System.clock() - start_time)} msec"

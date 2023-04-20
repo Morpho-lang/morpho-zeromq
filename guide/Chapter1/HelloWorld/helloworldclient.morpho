@@ -1,0 +1,14 @@
+// Hello World client
+
+import zeromq 
+
+print "[Client] Connecting to hello world server..."
+
+var requester = ZMQRequest("tcp://localhost:5555")
+
+for (requestNumber in 0...10) {
+    print "[Client] Sending Hello ${requestNumber}..."
+    requester.send("Hello")
+    var message = requester.receive()
+    print "[Client] Received World ${requestNumber} [${message}]"
+}

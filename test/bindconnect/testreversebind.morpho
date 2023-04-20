@@ -1,0 +1,23 @@
+// This example creates a Push-Pull pair, but binds and connects the two 
+// opposite to the default case
+
+import zeromq 
+
+//  Socket to send messages on
+var sender = ZMQPush()
+sender.bind("tcp://*:5557") // Default action is connect 
+
+var receiver = ZMQPull()
+receiver.connect("tcp://localhost:5557") // Default action is bind
+
+for (i in 1..5) {
+    sender.send("Hello")
+    var message = receiver.receive()
+    print "${message} ${i}"
+}
+
+// expect: Hello 1
+// expect: Hello 2
+// expect: Hello 3
+// expect: Hello 4
+// expect: Hello 5

@@ -38,7 +38,7 @@ The Publisher/subscriber pattern is used for data distribution. It involves a pu
 [tagpush]: # (push)
 [tagpull]: # (pull)
 
-The push/pull message exhange pattern is used for parallel task distribution. It involves two kinds of socket: `ZMQPush` used to send messages and `ZMQPull` used to receive messages. Both sockets can send and receive from multiple servers and clients. Messages are fair-queued into Pull sockets and load-balanced from Push sockets. This is a pa
+The push/pull message exhange pattern is used for parallel task distribution. It involves two kinds of socket: `ZMQPush` used to send messages and `ZMQPull` used to receive messages. Both sockets can send and receive from multiple servers and clients. Messages are fair-queued into Pull sockets and load-balanced from Push sockets. 
 
 ## Dealer-Router
 

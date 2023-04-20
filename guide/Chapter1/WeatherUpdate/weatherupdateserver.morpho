@@ -1,0 +1,15 @@
+// Weather Update Server
+// Binds Publisher socket to tcp://*:5556
+// Publishes random weather updates
+
+import zeromq 
+
+var publisher = ZMQPublisher("tcp://*:5556")
+
+while (true) {
+    var zipcode = randomint(99951)
+    var temperature = randomint(215)-80 
+    var humidity = randomint(50)+10
+
+    publisher.send("${zipcode} ${temperature} ${humidity}") 
+}
