@@ -15,7 +15,6 @@ var sender = ZMQPush("tcp://localhost:5558")
 
 while (true) {
     var message = receiver.receive()
-    print message
-    // Wait for Int(message)
+    System.sleep(Int(message)/1000)
     sender.send("")
 }

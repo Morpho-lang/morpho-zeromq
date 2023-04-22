@@ -8,21 +8,11 @@ import zeromq
 var sender = ZMQPush()
 sender.bind("tcp://*:5557") // Default action is connect 
 
-var receiver = ZMQPull()
-receiver.connect("tcp://localhost:5557") 
-
-for (i in 1..10) {
-    sender.send("Hello")
-    var message = receiver.receive()
-    print "${message} ${i}"
-}
-
-/*
 //  Socket to send start of batch message on
 var sink = ZMQPush("tcp://localhost:5558")
 
 print "Press Enter when the workers are ready:"
-// Wait for keypress
+System.readline() 
 print "Sending tasks to workers...\n"
 
 //  The first message is "0" and signals start of batch
@@ -33,13 +23,8 @@ var total_msec = 0
 //  Send 100 tasks
 for (taskNbr in 1..100) {
     var workload = randomint(100)+1
-    total_msec += workload deliver
+    total_msec += workload
     sender.send("${workload}")
 }
 
 print "Total expected cost: ${total_msec} msec"
-
-//?? Give 0MQ time to deliver 
-//sleep(1)
-
-*/

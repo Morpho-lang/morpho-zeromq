@@ -4,7 +4,7 @@
 
 import zeromq 
 
-var receiver = ZMQPull("tcp://localhost:5558")
+var receiver = ZMQPull("tcp://*:5558")
 
 //  Wait for start of batch
 receiver.receive() 
@@ -15,10 +15,14 @@ var start_time = System.clock()
 for (task_nbr in 1..100) {
     receiver.receive()
     if (mod(task_nbr, 10) == 0) {
-        print ":"
+        System.prnt(":")
     } else {
-        print "."
-    }
+        System.prnt(".")
+    } 
 } 
 
-print "Total elapsed time: ${1000*(System.clock() - start_time)} msec"
+print ""
+
+var end_time = System.clock() 
+
+print "Total elapsed time: ${1000*(end_time-start_time)} msec"

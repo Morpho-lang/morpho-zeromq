@@ -1,0 +1,8 @@
+
+var nWorkers = 8
+
+system("morpho5 tasksink.morpho &")
+
+for (i in 1..nWorkers) system("morpho5 taskworker.morpho &")
+
+system("morpho5 taskvent.morpho")
