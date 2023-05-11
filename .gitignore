@@ -3,3 +3,4 @@
 .vscode/settings.json
 src/.vscode/settings.json
 *.so
+lib/zeromq.dylib
