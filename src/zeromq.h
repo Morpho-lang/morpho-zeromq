@@ -4,6 +4,7 @@
 
 #define ZEROMQ_SOCKETCLASSNAME    "ZMQSocket"
 #define ZEROMQ_POLLERCLASSNAME    "ZMQPoller"
+#define ZEROMQ_PROXYCLASSNAME     "ZMQProxy"
 
 #define ZEROMQ_PUBLISHER_CONS     "ZMQPublisher"
 #define ZEROMQ_SUBSCRIBER_CONS    "ZMQSubscriber"
@@ -29,6 +30,8 @@
 #define ZEROMQ_SIGNAL_METHOD      "signal"
 #define ZEROMQ_WAIT_METHOD        "wait"
 #define ZEROMQ_FLUSH_METHOD       "flush"
+#define ZEROMQ_PAUSE_METHOD       "pause"
+#define ZEROMQ_RESUME_METHOD      "resume"
 
 #define ZEROMQ_SUBSCRIBE_METHOD   "subscribe"
 #define ZEROMQ_UNSUBSCRIBE_METHOD "unsubscribe"

@@ -65,13 +65,13 @@ typedef struct {
 objecttype objectzeromqpollertype;
 #define ZEROMQ_POLLER objectzeromqpollertype
 
-/** Tests whether an object is an socket */
+/** Tests whether an object is an poller */
 #define ZEROMQ_ISPOLLER(val) object_istype(val, ZEROMQ_POLLER)
 
-/** Gets the object as a zeromq socket */
+/** Gets the object as a zeromq poller */
 #define ZEROMQ_GETPOLLER(val)   ((objectzeromqpoller *) MORPHO_GETOBJECT(val))
 
-/** ZeroMQ socket definitions */
+/** ZeroMQ poller definitions */
 void objectzeromqpoller_printfn(object *obj) {
     printf("<ZeroMQPoller>");
 }
@@ -99,6 +99,49 @@ objecttypedefn objectzeromqpollerdefn = {
     .markfn=objectzeromqpoller_markfn,
     .freefn=objectzeromqpoller_freefn,
     .sizefn=objectzeromqpoller_sizefn
+};
+
+/* -------------------------------------------------------
+ * ZeroMQ proxy object type
+ * ------------------------------------------------------- */
+
+typedef struct {
+    object obj; 
+    zactor_t *proxy; 
+} objectzeromqproxy; 
+
+objecttype objectzeromqproxytype;
+#define ZEROMQ_PROXY objectzeromqproxytype
+
+/** Tests whether an object is an poller */
+#define ZEROMQ_ISPROXY(val) object_istype(val, ZEROMQ_PROXY)
+
+/** Gets the object as a zeromq proxy */
+#define ZEROMQ_GETPROXY(val)   ((objectzeromqproxy *) MORPHO_GETOBJECT(val))
+
+/** ZeroMQ proxy definitions */
+void objectzeromqproxy_printfn(object *obj) {
+    printf("<ZeroMQProxy>");
+}
+
+void objectzeromqproxy_markfn(object *obj, void *v) {
+//    objectzeromqproxy *proxy = (objectzeromqproxy *) obj;
+}
+
+void objectzeromqproxy_freefn(object *obj) {
+    objectzeromqproxy *proxy = (objectzeromqproxy *) obj;
+    if (proxy->proxy) zactor_destroy(&proxy->proxy);
+} 
+
+size_t objectzeromqproxy_sizefn(object *obj) {
+    return sizeof(objectzeromqproxy);
+}
+
+objecttypedefn objectzeromqproxydefn = {
+    .printfn=objectzeromqproxy_printfn,
+    .markfn=objectzeromqproxy_markfn,
+    .freefn=objectzeromqproxy_freefn,
+    .sizefn=objectzeromqproxy_sizefn
 };
 
 /* -------------------------------------------------------
@@ -342,6 +385,60 @@ MORPHO_METHOD(ZEROMQ_WAIT_METHOD, ZeroMQPoller_wait, BUILTIN_FLAGSEMPTY)
 MORPHO_ENDCLASS
 
 /* -------------------------------------------------------
+ * Proxy 
+ * ------------------------------------------------------- */
+
+/** Creates a new ZeroMQ proxy object */
+objectzeromqproxy *object_newzeromqproxy(zactor_t *proxy) {
+    objectzeromqproxy *new = (objectzeromqproxy *) object_new(sizeof(objectzeromqproxy), ZEROMQ_PROXY);
+    if (new) new->proxy = proxy; 
+    return new; 
+}
+
+/** Constructor function for a ZMQ Proxy object */
+value ZeroMQProxy(vm *v, int nargs, value *args) { 
+    value out = MORPHO_NIL; 
+
+    zactor_t *new = zactor_new(zproxy, NULL);
+    if (new) {
+        objectzeromqproxy *poll = object_newzeromqproxy(new);
+
+        if (poll) out = MORPHO_OBJECT(poll);
+        if (MORPHO_ISOBJECT(out)) morpho_bindobjects(v, 1, &out);
+    }
+
+    return out; 
+} 
+
+value ZeroMQProxy_pause(vm *v, int nargs, value *args) { 
+    objectzeromqproxy *self = ZEROMQ_GETPROXY(MORPHO_SELF(args));
+
+    if (self->proxy) {
+        zstr_sendx(self->proxy, "PAUSE", NULL);
+        zsock_wait(self->proxy);
+    }
+
+    return MORPHO_NIL; 
+}
+
+value ZeroMQProxy_resume(vm *v, int nargs, value *args) { 
+    objectzeromqproxy *self = ZEROMQ_GETPROXY(MORPHO_SELF(args));
+
+    if (self->proxy) {
+        zstr_sendx(self->proxy, "RESUME", NULL);
+        zsock_wait(self->proxy);
+    }
+
+    return MORPHO_NIL; 
+}
+
+MORPHO_BEGINCLASS(ZeroMQProxy)
+//MORPHO_METHOD(ZEROMQ_WAIT_METHOD, ZeroMQPoller_wait, BUILTIN_FLAGSEMPTY)
+MORPHO_METHOD(ZEROMQ_PAUSE_METHOD, ZeroMQProxy_pause, BUILTIN_FLAGSEMPTY),
+MORPHO_METHOD(ZEROMQ_RESUME_METHOD, ZeroMQProxy_resume, BUILTIN_FLAGSEMPTY) 
+MORPHO_ENDCLASS
+
+/* -------------------------------------------------------
  * Initialization and finalization
  * ------------------------------------------------------- */
 
@@ -367,10 +464,17 @@ void zeromq_initialize(void) {
     builtin_addfunction(ZEROMQ_XSUBSCRIBER_CONS, ZeroMQXSubscriber, BUILTIN_FLAGSEMPTY);
     builtin_addfunction(ZEROMQ_PAIR_CONS, ZeroMQPair, BUILTIN_FLAGSEMPTY);
 
+    // ZMQPoller
     value zeromqpollerclass=builtin_addclass(ZEROMQ_POLLERCLASSNAME, MORPHO_GETCLASSDEFINITION(ZeroMQPoller), objclass);
     object_setveneerclass(ZEROMQ_POLLER, zeromqpollerclass);
 
     builtin_addfunction(ZEROMQ_POLLERCLASSNAME, ZeroMQPoller, BUILTIN_FLAGSEMPTY);
+
+    // ZMQProxy
+    value zeromqproxyclass=builtin_addclass(ZEROMQ_PROXYCLASSNAME, MORPHO_GETCLASSDEFINITION(ZeroMQProxy), objclass);
+    object_setveneerclass(ZEROMQ_PROXY, zeromqproxyclass);
+
+    //builtin_addfunction(ZEROMQ_PROXYCLASSNAME, ZeroMQProxy, BUILTIN_FLAGSEMPTY);
 
     morpho_defineerror(ZEROMQ_CONSARGS, ERROR_HALT, ZEROMQ_CONSARGS_MSG);
     morpho_defineerror(ZEROMQ_ERR, ERROR_HALT, ZEROMQ_ERR_MSG);
