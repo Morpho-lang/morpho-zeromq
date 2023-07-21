@@ -1,0 +1,17 @@
+
+import zeromq 
+
+// Create and configure proxy
+var proxy = ZMQProxy()
+proxy.setfrontend(ZMQPull, "inproc://frontend") 
+proxy.setbackend(ZMQPush, "inproc://backend") 
+
+// Connect application sockets to proxy 
+var faucet = ZMQPush(">inproc://frontend")
+var sink = ZMQPull(">inproc://backend")
+
+// Send messages and check they arrived
+faucet.send("Hello World");
+var msg = sink.receive();
+
+print msg // expect: Hello World
