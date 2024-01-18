@@ -1,7 +1,7 @@
 src = $(wildcard *.c) $(wildcard */*.c)
 obj = $(src:.c=.dylib)
 
-LDFLAGS  = -lm -lcblas -llapack -lcxsparse -lczmq -L/usr/local/lib
+LDFLAGS  = -lm -lcblas -llapack -lcxsparse -lczmq -L/usr/local/lib -lmorpho
 CFLAGS   =  -undefined dynamic_lookup -dynamiclib $(EXTCFLAGS) -O3 -I/usr/local/include/morpho
 
 zeromq: 

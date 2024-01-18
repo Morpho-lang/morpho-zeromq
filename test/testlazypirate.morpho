@@ -1,3 +1,3 @@
 
-system("morpho5 lazypirate/lpclient.morpho &")
-system("morpho5 lazypirate/lpserver.morpho &")
+system("morpho6 lazypirate/lpclient.morpho &")
+system("morpho6 lazypirate/lpserver.morpho &")
