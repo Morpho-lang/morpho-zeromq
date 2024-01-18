@@ -25,8 +25,8 @@ get_filename_component(MORPHO_INCLUDE ${MORPHO_HEADER} DIRECTORY)
 # Add morpho headers to MORPHO_INCLUDE
 target_include_directories(zeromq PUBLIC ${MORPHO_INCLUDE})
 
-# Add general 
-target_include_directories(zeromq PUBLIC /usr/local/include)
+# Add general header search paths
+target_include_directories(zeromq PUBLIC /usr/local/include /opt/homebrew/include)
 
 # Add morpho headers in subfolders to MORPHO_INCLUDE
 file(GLOB morpho_subdirectories LIST_DIRECTORIES true ${MORPHO_INCLUDE}/*)
