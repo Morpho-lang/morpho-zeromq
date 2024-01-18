@@ -1,9 +1,6 @@
 #include <stdio.h>
-#include <morpho/morpho.h>
-#include <morpho/builtin.h>
-#include <morpho/value.h>
-#include <morpho/veneer.h>
-#include <morpho/functional.h>
+#include <morpho.h>
+#include <classes.h>
 
 #include <czmq.h>
 #include "zeromq.h"
@@ -27,10 +24,10 @@ objecttype objectzeromqsockettype;
 #define ZEROMQ_ISSOCKET(val) object_istype(val, ZEROMQ_SOCKET)
 
 /** ZeroMQ socket definitions */
-void objectzeromqsocket_printfn(object *obj) {
+void objectzeromqsocket_printfn(object *obj, void *v) {
     objectzeromqsocket *d = (objectzeromqsocket *) obj;
     const char *type = zsock_type_str(d->socket);
-    printf("<%s: %s>", ZEROMQ_SOCKETCLASSNAME, type);
+    morpho_printf(v, "<%s: %s>", ZEROMQ_SOCKETCLASSNAME, type);
 }
 
 void objectzeromqsocket_markfn(object *obj, void *v) {
@@ -49,7 +46,9 @@ objecttypedefn objectzeromqsocketdefn = {
     .printfn=objectzeromqsocket_printfn,
     .markfn=objectzeromqsocket_markfn,
     .freefn=objectzeromqsocket_freefn,
-    .sizefn=objectzeromqsocket_sizefn
+    .sizefn=objectzeromqsocket_sizefn,
+    .hashfn=NULL,
+    .cmpfn=NULL
 };
 
 /* -------------------------------------------------------
@@ -72,8 +71,8 @@ objecttype objectzeromqpollertype;
 #define ZEROMQ_GETPOLLER(val)   ((objectzeromqpoller *) MORPHO_GETOBJECT(val))
 
 /** ZeroMQ poller definitions */
-void objectzeromqpoller_printfn(object *obj) {
-    printf("<ZeroMQPoller>");
+void objectzeromqpoller_printfn(object *obj, void *v) {
+    morpho_printf(v, "<ZeroMQPoller>");
 }
 
 void objectzeromqpoller_markfn(object *obj, void *v) {
@@ -98,7 +97,9 @@ objecttypedefn objectzeromqpollerdefn = {
     .printfn=objectzeromqpoller_printfn,
     .markfn=objectzeromqpoller_markfn,
     .freefn=objectzeromqpoller_freefn,
-    .sizefn=objectzeromqpoller_sizefn
+    .sizefn=objectzeromqpoller_sizefn,
+    .hashfn=NULL,
+    .cmpfn=NULL
 };
 
 /* -------------------------------------------------------
@@ -122,8 +123,8 @@ objecttype objectzeromqproxytype;
 #define ZEROMQ_GETPROXY(val)   ((objectzeromqproxy *) MORPHO_GETOBJECT(val))
 
 /** ZeroMQ proxy definitions */
-void objectzeromqproxy_printfn(object *obj) {
-    printf("<ZeroMQProxy>");
+void objectzeromqproxy_printfn(object *obj, void *v) {
+    morpho_printf(v, "<ZeroMQProxy>");
 }
 
 void objectzeromqproxy_markfn(object *obj, void *v) {
@@ -145,7 +146,9 @@ objecttypedefn objectzeromqproxydefn = {
     .printfn=objectzeromqproxy_printfn,
     .markfn=objectzeromqproxy_markfn,
     .freefn=objectzeromqproxy_freefn,
-    .sizefn=objectzeromqproxy_sizefn
+    .sizefn=objectzeromqproxy_sizefn,
+    .hashfn=NULL,
+    .cmpfn=NULL
 };
 
 /* -------------------------------------------------------
