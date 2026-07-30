@@ -77,8 +77,8 @@ void objectzeromqpoller_printfn(object *obj, void *v) {
 
 void objectzeromqpoller_markfn(object *obj, void *v) {
     objectzeromqpoller *poller = (objectzeromqpoller *) obj;
-    for (int i=0; i<poller->readers.capacity; i++) {
-        dictionaryentry *e = poller->readers.contents;
+    for (unsigned int i=0; i<poller->readers.capacity; i++) {
+        dictionaryentry *e = &poller->readers.contents[i];
         if (!MORPHO_ISNIL(e->key)) morpho_markvalue(v, e->val);
     }
 }
@@ -342,16 +342,30 @@ void zeromqpoller_add(objectzeromqpoller *poll, value sock) {
     if (!ZEROMQ_ISSOCKET(sock)) return; 
     zsock_t *sockt = ZEROMQ_GETSOCKET(sock)->socket; 
     zpoller_add(poll->poller, sockt);
-    dictionary_insert(&poll->readers, MORPHO_OBJECT(sockt), sock);
+    dictionary_insert(&poll->readers, sock, sock);
 }
 
 /** Remove a socket from a poller */
 void zeromqpoller_remove(objectzeromqpoller *poll, value sock) {
     if (!ZEROMQ_ISSOCKET(sock)) return; 
     zsock_t *sockt = ZEROMQ_GETSOCKET(sock)->socket; 
-    if (dictionary_get(&poll->readers, MORPHO_OBJECT(sockt), NULL)) {
+    if (dictionary_get(&poll->readers, sock, NULL)) {
         zpoller_remove(poll->poller, sockt);
+        dictionary_remove(&poll->readers, sock);
     }
+}
+
+/** Find the Morpho socket corresponding to a czmq socket */
+value zeromqpoller_findsocket(objectzeromqpoller *poll, zsock_t *sockt) {
+    if (!sockt) return MORPHO_NIL;
+
+    for (unsigned int i=0; i<poll->readers.capacity; i++) {
+        dictionaryentry *e = &poll->readers.contents[i];
+        if (MORPHO_ISNIL(e->key) || !ZEROMQ_ISSOCKET(e->val)) continue;
+        if (ZEROMQ_GETSOCKET(e->val)->socket == sockt) return e->val;
+    }
+
+    return MORPHO_NIL;
 }
 
 /** Constructor function for a ZMQ Poller object */
@@ -382,7 +396,7 @@ value ZeroMQPoller_wait(vm *v, int nargs, value *args) {
     if (nargs==1) morpho_valuetoint(MORPHO_GETARG(args, 0), &wait);
 
     zsock_t *sock = zpoller_wait(self->poller, wait);
-    if (sock) dictionary_get(&self->readers, MORPHO_OBJECT(sock), &out);
+    if (sock) out = zeromqpoller_findsocket(self, sock);
 
     return out; 
 }
