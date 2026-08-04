@@ -15,7 +15,7 @@
 #define ZEROMQ_PUSH_CONS          "ZMQPush"
 #define ZEROMQ_PULL_CONS          "ZMQPull"
 #define ZEROMQ_XPUBLISHER_CONS    "ZMQXPublisher"
-#define ZEROMQ_XSUBSCRIBER_CONS   "ZMQXSubcriber"
+#define ZEROMQ_XSUBSCRIBER_CONS   "ZMQXSubscriber"
 #define ZEROMQ_PAIR_CONS          "ZMQPair"
 
 #define ZEROMQ_BIND_METHOD        "bind"
@@ -42,6 +42,9 @@
 
 #define ZEROMQ_CONSARGS           "ZMQConsArgs"
 #define ZEROMQ_CONSARGS_MSG       "Socket constructor argument should be an endpoint."
+
+#define ZEROMQ_ARGS               "ZMQArgs"
+#define ZEROMQ_ARGS_MSG           "Incorrect arguments for ZeroMQ method."
 
 #define ZEROMQ_ERR                "ZMQErr"
 #define ZEROMQ_ERR_MSG            "ZeroMQ error: %s."
