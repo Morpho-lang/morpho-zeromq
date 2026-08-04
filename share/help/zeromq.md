@@ -37,7 +37,7 @@ Some examples of different transports.
     var req = ZMQRequest("ipc:///tmp/feeds/0") // Connect to inter-process communication on UNIX only
     var req = ZMQRequest("inproc://endpoint-string") // Connect to an in-process communication socket.
 
-Each socket type has a default action, either bind or connect. To override, simply create the socket without and endpoint specified and use the `bind` or `connect` methods: 
+Each socket type has a default action, either bind or connect. To override, simply create the socket without an endpoint specified and use the `bind` or `connect` methods: 
 
     var req = ZMQRequest() 
     req.bind("tcp://*:5555") 
@@ -76,7 +76,7 @@ By default, `ZMQPublisher` *binds* to an endpoint, and `ZMQSubscriber` *connects
 [tagpush]: # (push)
 [tagpull]: # (pull)
 
-The push/pull message exhange pattern is used for parallel task distribution. It involves two kinds of socket: `ZMQPush` used to send messages and `ZMQPull` used to receive messages. Both sockets can send and receive from multiple servers and clients. Messages are fair-queued into Pull sockets and load-balanced from Push sockets. 
+The push/pull message exchange pattern is used for parallel task distribution. It involves two kinds of socket: `ZMQPush` used to send messages and `ZMQPull` used to receive messages. Both sockets can send and receive from multiple servers and clients. Messages are fair-queued into Pull sockets and load-balanced from Push sockets. 
 
 By default, `ZMQPush` *connects* to an endpoint, and `ZMQPull` *binds*. 
 
@@ -85,3 +85,37 @@ By default, `ZMQPush` *connects* to an endpoint, and `ZMQPull` *binds*.
 Provides a non-blocking request-reply pattern implemented by the `ZMQDealer` and `ZMQRouter` classes. 
 
 By default, `ZMQRouter` *binds* to an endpoint, and `ZMQDealer` *connects*. 
+
+## ZMQPoller
+[tagZMQPoller]: # (ZMQPoller)
+[tagpoller]: # (poller)
+
+`ZMQPoller` waits until one or more sockets are ready to receive. Pass the sockets to poll as constructor arguments, then call `wait`:
+
+    var client = ZMQRequest("tcp://127.0.0.1:5555")
+    var poller = ZMQPoller(client)
+
+    // Wait up to 2500 ms for a reply; returns the ready socket, or nil on timeout
+    var ready = poller.wait(2500)
+    if (ready==client) print client.receive()
+
+With no timeout argument, `wait` blocks indefinitely until a socket is ready.
+
+## ZMQProxy
+[tagZMQProxy]: # (ZMQProxy)
+[tagproxy]: # (proxy)
+
+`ZMQProxy` runs a built-in message proxy between a frontend and a backend socket type. Configure each side with a socket constructor and an endpoint:
+
+    var proxy = ZMQProxy()
+    proxy.setfrontend(ZMQPull, "inproc://frontend")
+    proxy.setbackend(ZMQPush, "inproc://backend")
+
+    // Application sockets connect to the proxy endpoints
+    var faucet = ZMQPush(">inproc://frontend")
+    var sink = ZMQPull(">inproc://backend")
+
+    faucet.send("Hello World")
+    print sink.receive()
+
+Use `pause` and `resume` to temporarily stop and restart the proxy. The `frontend` and `backend` methods return the configured endpoint strings.

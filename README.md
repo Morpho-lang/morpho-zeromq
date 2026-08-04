@@ -4,10 +4,10 @@ Morpho extension that provides an interface to the [ZeroMQ](https://zeromq.org) 
 
 ## Installation
 
-To install this, ensure you have zeromq installed using:
+To install this, ensure you have CZMQ (and ZeroMQ) installed using:
 
-    brew install czmq    [macOS]
-    apt get libczmq-dev  [ubuntu/WSL]
+    brew install czmq              [macOS]
+    apt install libczmq-dev        [ubuntu/WSL]
 
 Then clone this repository onto your computer in any convenient place:
 
