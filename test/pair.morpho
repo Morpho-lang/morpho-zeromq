@@ -1,4 +1,4 @@
-
+// ZMQPair round-trip and basic ZMQPoller readiness.
 import zeromq
 
 var a = ZMQPair()

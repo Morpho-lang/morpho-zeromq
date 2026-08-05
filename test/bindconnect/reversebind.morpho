@@ -1,7 +1,5 @@
-// This example creates a Push-Pull pair, but binds and connects the two 
-// opposite to the default case
-
-import zeromq 
+// Push/Pull with bind/connect roles reversed over TCP.
+import zeromq
 
 //  Socket to send messages on
 var sender = ZMQPush()

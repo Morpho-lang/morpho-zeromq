@@ -1,0 +1,21 @@
+// disconnect/reconnect and unbind(String) clear endpoint().
+import zeromq
+
+var pull = ZMQPull("inproc://lifecycle")
+var push = ZMQPush("inproc://lifecycle")
+
+push.send("one")
+print pull.receive() // expect: one
+
+push.disconnect("inproc://lifecycle")
+print "disconnected" // expect: disconnected
+
+push.connect("inproc://lifecycle")
+push.send("two")
+print pull.receive() // expect: two
+
+var sock = ZMQPull()
+sock.bind("inproc://unbind-ep")
+print sock.endpoint() // expect: inproc://unbind-ep
+sock.unbind("inproc://unbind-ep")
+print sock.endpoint() // expect: nil

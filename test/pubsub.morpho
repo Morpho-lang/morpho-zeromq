@@ -1,0 +1,28 @@
+// Pub/sub topic filter via ctor, unsubscribe, and subscribe.
+import zeromq
+
+var pub = ZMQPublisher("inproc://pubsub")
+var sub = ZMQSubscriber("inproc://pubsub", "keep")
+
+sub.timeout(50)
+var msg = nil
+for (i in 1..40) {
+  pub.send("keep ${i}")
+  pub.send("drop ${i}")
+  msg = sub.receive()
+  if (msg) break
+}
+print msg.split(" ")[0] // expect: keep
+
+sub.unsubscribe("keep")
+pub.send("keep gone")
+print sub.receive() // expect: nil
+
+sub.subscribe("drop")
+msg = nil
+for (i in 1..40) {
+  pub.send("drop ${i}")
+  msg = sub.receive()
+  if (msg) break
+}
+print msg.split(" ")[0] // expect: drop

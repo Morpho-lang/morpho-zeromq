@@ -1,4 +1,4 @@
-
+// Inproc Pull→Push proxy forwards a message.
 import zeromq
 
 var proxy = ZMQProxy(ZMQPull, "inproc://frontend", ZMQPush, "inproc://backend")

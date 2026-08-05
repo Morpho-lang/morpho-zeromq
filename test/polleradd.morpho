@@ -1,4 +1,4 @@
-
+// Poller add/remove across two sockets.
 import zeromq
 
 var a = ZMQPull("inproc://poller-a")

@@ -1,3 +1,4 @@
+// Inproc Push/Pull message round-trip.
 import zeromq
 
 var pull = ZMQPull("inproc://pushpull")

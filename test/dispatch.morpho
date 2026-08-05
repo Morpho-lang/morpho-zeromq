@@ -1,4 +1,4 @@
-
+// Float overloads for wait/timeout/linger, and unbind no-op when unbound.
 import zeromq
 
 var s = ZMQPair()

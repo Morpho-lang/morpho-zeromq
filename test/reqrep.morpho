@@ -1,0 +1,10 @@
+// Inproc Request/Reply hello round-trip.
+import zeromq
+
+var rep = ZMQReply("inproc://reqrep")
+var req = ZMQRequest("inproc://reqrep")
+
+req.send("Hello")
+print rep.receive() // expect: Hello
+rep.send("World")
+print req.receive() // expect: World

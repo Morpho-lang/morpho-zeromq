@@ -1,4 +1,4 @@
-
+// Bad ZMQProxy constructors raise ZMQArgs.
 import zeromq
 
 try {

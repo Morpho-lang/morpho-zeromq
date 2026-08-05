@@ -1,4 +1,4 @@
-
+// Router/Dealer multipart: string, list, and tuple frames.
 import zeromq
 
 var router = ZMQRouter("inproc://multipart")

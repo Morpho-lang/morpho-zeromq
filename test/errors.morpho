@@ -1,4 +1,4 @@
-
+// Invalid bind raises a catchable ZMQErr.
 import zeromq
 
 try {

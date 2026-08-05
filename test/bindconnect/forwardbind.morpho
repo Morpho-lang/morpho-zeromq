@@ -1,7 +1,5 @@
-// This example creates a Push-Pull pair, but binds and connects the two 
-// in the default way
-
-import zeromq 
+// Push/Pull with default connect/bind roles over TCP.
+import zeromq
 
 //  Socket to send messages on
 var sender = ZMQPush("tcp://localhost:5557") // Default action is connect 

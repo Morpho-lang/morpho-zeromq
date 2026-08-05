@@ -1,4 +1,4 @@
-
+// XPUB/XSUB proxy with slow-joiner subscription propagation.
 import zeromq
 
 var proxy = ZMQProxy(ZMQXSubscriber, "inproc://xfront", ZMQXPublisher, "inproc://xback")

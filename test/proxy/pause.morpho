@@ -1,0 +1,26 @@
+// Proxy pause blocks forwarding; resume delivers queued messages.
+import zeromq
+
+var proxy = ZMQProxy(ZMQPull, "inproc://pause-front", ZMQPush, "inproc://pause-back")
+
+var faucet = ZMQPush(">inproc://pause-front")
+var sink = ZMQPull(">inproc://pause-back")
+sink.timeout(50)
+
+faucet.send("before")
+print sink.receive() // expect: before
+
+proxy.pause()
+faucet.send("held")
+print sink.receive() // expect: nil
+
+proxy.resume()
+var msg = nil
+for (i in 1..40) {
+  msg = sink.receive()
+  if (msg) break
+}
+print msg // expect: held
+
+faucet.send("after")
+print sink.receive() // expect: after

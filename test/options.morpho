@@ -1,4 +1,4 @@
-
+// Socket options: timeout, linger, identity, unbounded; timeout receive is nil.
 import zeromq
 
 var pull = ZMQPull("inproc://options")
