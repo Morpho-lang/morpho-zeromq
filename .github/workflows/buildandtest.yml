@@ -1,0 +1,51 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ "main", "dev" ]
+  pull_request:
+    branches: [ "main", "dev" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v5
+
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y \
+          libsuitesparse-dev liblapacke-dev libunistring-dev \
+          libczmq-dev pkg-config
+
+    - name: Build and install Morpho
+      run: |
+        git clone --depth 1 --branch dev https://github.com/Morpho-lang/morpho.git
+        cd morpho
+        cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+        cmake --build build --config Release
+        sudo cmake --install build --config Release
+        sudo mkdir -p /usr/local/lib/morpho
+        sudo ldconfig
+        # Package cmake installs may write under /usr/local without sudo
+        sudo chown -R "$USER" /usr/local
+
+    - name: Build and install morpho-cli
+      run: |
+        git clone --depth 1 --branch main https://github.com/Morpho-lang/morpho-cli.git
+        cd morpho-cli
+        cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+        cmake --build build --config Release
+        cmake --install build --config Release
+
+    - name: Build and install morpho-zeromq
+      run: |
+        cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+        cmake --build build --config Release
+        cmake --install build --config Release
+        echo "$GITHUB_WORKSPACE" >> ~/.morphopackages
+
+    - name: Test
+      run: python3 test/test.py -c

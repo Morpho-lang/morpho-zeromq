@@ -1,0 +1,16 @@
+import zeromq
+
+var pull = ZMQPull("inproc://pushpull")
+var push = ZMQPush("inproc://pushpull")
+
+for (i in 1..5) {
+  push.send("Hello World ${i}!")
+  var s = pull.receive()
+  print s
+}
+
+// expect: Hello World 1!
+// expect: Hello World 2!
+// expect: Hello World 3!
+// expect: Hello World 4!
+// expect: Hello World 5!

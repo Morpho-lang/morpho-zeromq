@@ -10,7 +10,7 @@ The `ZeroMQ` extension provides support for distributed computing through the `Z
 
     import zeromq
 
-You then create appropriate `ZMQSocket` objects and bind or connect to them by calling the appropriate constructor. `ZeroMQ` supports multiple types of transport, including interprocess, tcp, etc.; see the examples or `czmq`/`ZeroMQ` documentation for further details. See `ZMQSocket` for general information about sockets.
+You then create appropriate `ZMQSocket` objects and bind or connect to them by calling the appropriate constructor. `ZeroMQ` supports multiple types of transport, including interprocess, tcp, etc.; see `examples/reqrep/`, `examples/pubsub/`, `examples/lazypirate/`, `examples/zguide/chapter1/`, or the `czmq`/`ZeroMQ` documentation for further details. See `ZMQSocket` for general information about sockets.
 
 Once appropriate sockets have been created, use the `send` and `receive` methods to send information.
 
@@ -202,9 +202,8 @@ By default, `ZMQPublisher` *binds* to an endpoint, and `ZMQSubscriber` *connects
 
 Typical proxy layout:
 
-    // Publishers connect here; subscribers connect to the XPUB side
-    proxy.setfrontend(ZMQXSubscriber, "tcp://*:5559")
-    proxy.setbackend(ZMQXPublisher, "tcp://*:5560")
+    var proxy = ZMQProxy(ZMQXSubscriber, "tcp://*:5559", ZMQXPublisher, "tcp://*:5560")
+    // Publishers connect to the XSUB side; subscribers connect to the XPUB side
 
 By default, `ZMQXPublisher` *binds* to an endpoint, and `ZMQXSubscriber` *connects*.
 
@@ -291,11 +290,9 @@ Removes a socket from the poller:
 [tagZMQProxy]: # (ZMQProxy)
 [tagproxy]: # (proxy)
 
-`ZMQProxy` runs a built-in message proxy between a frontend and a backend socket type:
+`ZMQProxy` runs a built-in message proxy between a frontend and a backend. Pass socket constructors such as `ZMQPull` or `ZMQXSubscriber` with their endpoints:
 
-    var proxy = ZMQProxy()
-    proxy.setfrontend(ZMQPull, "inproc://frontend")
-    proxy.setbackend(ZMQPush, "inproc://backend")
+    var proxy = ZMQProxy(ZMQPull, "inproc://frontend", ZMQPush, "inproc://backend")
 
     // Application sockets connect to the proxy endpoints
     var faucet = ZMQPush(">inproc://frontend")
@@ -305,34 +302,6 @@ Removes a socket from the poller:
     print sink.receive()
 
 [showsubtopics]: # (subtopics)
-
-### Setfrontend
-[tagsetfrontend]: # (setfrontend)
-
-Configures the proxy frontend with a socket constructor and endpoint:
-
-    proxy.setfrontend(ZMQPull, "inproc://frontend")
-
-### Frontend
-[tagfrontend]: # (frontend)
-
-Returns the configured frontend endpoint string:
-
-    print proxy.frontend()
-
-### Setbackend
-[tagsetbackend]: # (setbackend)
-
-Configures the proxy backend with a socket constructor and endpoint:
-
-    proxy.setbackend(ZMQPush, "inproc://backend")
-
-### Backend
-[tagbackend]: # (backend)
-
-Returns the configured backend endpoint string:
-
-    print proxy.backend()
 
 ### Pause
 [tagpause]: # (pause)

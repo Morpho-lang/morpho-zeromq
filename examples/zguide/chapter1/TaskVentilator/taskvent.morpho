@@ -1,8 +1,11 @@
-// Task ventilator
+// Task ventilator (ZGuide Ch.1). Also run sink + workers, or use testtaskventilator.morpho:
+//   morpho6 examples/zguide/chapter1/TaskVentilator/tasksink.morpho
+//   morpho6 examples/zguide/chapter1/TaskVentilator/taskworker.morpho
+//   morpho6 examples/zguide/chapter1/TaskVentilator/taskvent.morpho
 // Binds PUSH socket to tcp://localhost:5557
 // Sends batch of tasks to workers via that socket
 
-import zeromq 
+import zeromq
 
 //  Socket to send messages on
 var sender = ZMQPush()

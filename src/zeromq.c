@@ -1,6 +1,6 @@
 #include <stdio.h>
-#include <ctype.h>
 #include <errno.h>
+#include <string.h>
 #include <morpho.h>
 #include <classes.h>
 
@@ -112,8 +112,6 @@ objecttypedefn objectzeromqpollerdefn = {
 typedef struct {
     object obj;
     zactor_t *proxy;
-    value frontend;
-    value backend;
 } objectzeromqproxy;
 
 objecttype objectzeromqproxytype;
@@ -131,9 +129,6 @@ void objectzeromqproxy_printfn(object *obj, void *v) {
 }
 
 void objectzeromqproxy_markfn(object *obj, void *v) {
-    objectzeromqproxy *proxy = (objectzeromqproxy *) obj;
-    morpho_markvalue(v, proxy->frontend);
-    morpho_markvalue(v, proxy->backend);
 }
 
 void objectzeromqproxy_freefn(object *obj) {
@@ -636,7 +631,7 @@ MORPHO_ENDCLASS
  * Proxy
  * ------------------------------------------------------- */
 
-/** Deduces a czmq socket type from a constructor function or metafunction */
+/** Map a Morpho ZMQ* constructor to a czmq zsock_type_str name (PUB, XSUB, …) */
 bool zeromq_sockettypefromfn(value fn, char *out) {
     if (!out) return false;
 
@@ -649,103 +644,110 @@ bool zeromq_sockettypefromfn(value fn, char *out) {
 
     if (!MORPHO_ISSTRING(name)) return false;
     char *fnname = MORPHO_GETCSTRING(name);
-
     if (strncmp(fnname, "ZMQ", 3)!=0) return false;
 
-    strcpy(out, fnname+3);
-    for (int i=0; out[i]!='\0'; i++) out[i] = (char) toupper((unsigned char) out[i]);
+    /* Keep full Morpho names for users; translate to CZMQ short type strings. */
+    static const struct { const char *morpho; const char *czmq; } map[] = {
+        { "Publisher",   "PUB" },
+        { "Subscriber",  "SUB" },
+        { "Request",     "REQ" },
+        { "Reply",       "REP" },
+        { "Dealer",      "DEALER" },
+        { "Router",      "ROUTER" },
+        { "Push",        "PUSH" },
+        { "Pull",        "PULL" },
+        { "XPublisher",  "XPUB" },
+        { "XSubscriber", "XSUB" },
+        { "Pair",        "PAIR" },
+        { NULL, NULL }
+    };
+
+    const char *suffix = fnname + 3;
+    for (int i=0; map[i].morpho; i++) {
+        if (strcmp(suffix, map[i].morpho)==0) {
+            strcpy(out, map[i].czmq);
+            return true;
+        }
+    }
+    return false;
+}
+
+/** Send a command to the proxy actor and wait for its reply */
+bool zeromq_proxycmd(vm *v, zactor_t *proxy, const char *cmd, const char *a, const char *b) {
+    int sent = (b) ? zstr_sendx(proxy, cmd, a, b, NULL)
+                   : (a) ? zstr_sendx(proxy, cmd, a, NULL)
+                         : zstr_sendx(proxy, cmd, NULL);
+    if (sent==-1) {
+        zeromq_error(v);
+        return false;
+    }
+    if (zsock_wait(proxy)==-1) {
+        zeromq_error(v);
+        return false;
+    }
     return true;
 }
 
 /** Creates a new ZeroMQ proxy object */
 objectzeromqproxy *object_newzeromqproxy(zactor_t *proxy) {
     objectzeromqproxy *new = (objectzeromqproxy *) object_new(sizeof(objectzeromqproxy), ZEROMQ_PROXY);
-    if (new) {
-        new->proxy = proxy;
-        new->frontend = MORPHO_NIL;
-        new->backend = MORPHO_NIL;
-    }
+    if (new) new->proxy = proxy;
     return new;
 }
 
-/** Constructor function for a ZMQ Proxy object */
+/** Constructor: ZMQProxy(frontType, frontEndpoint, backType, backEndpoint) */
 value ZeroMQProxy(vm *v, int nargs, value *args) {
-    zactor_t *new = zactor_new(zproxy, NULL);
-    if (!new) {
+    char ftype[ZEROMQ_TYPEBUFFERLENGTH];
+    char btype[ZEROMQ_TYPEBUFFERLENGTH];
+
+    if (!zeromq_sockettypefromfn(MORPHO_GETARG(args, 0), ftype) ||
+        !zeromq_sockettypefromfn(MORPHO_GETARG(args, 2), btype)) {
+        morpho_runtimeerror(v, ZEROMQ_ARGS);
+        return MORPHO_NIL;
+    }
+
+    zactor_t *actor = zactor_new(zproxy, NULL);
+    if (!actor) {
         zeromq_error(v);
         return MORPHO_NIL;
     }
 
-    value out = morpho_wrapandbind(v, (object *) object_newzeromqproxy(new));
-    if (MORPHO_ISNIL(out)) zactor_destroy(&new);
+    const char *fep = MORPHO_GETCSTRING(MORPHO_GETARG(args, 1));
+    const char *bep = MORPHO_GETCSTRING(MORPHO_GETARG(args, 3));
+
+    if (!zeromq_proxycmd(v, actor, "FRONTEND", ftype, fep) ||
+        !zeromq_proxycmd(v, actor, "BACKEND", btype, bep)) {
+        zactor_destroy(&actor);
+        return MORPHO_NIL;
+    }
+
+    objectzeromqproxy *proxy = object_newzeromqproxy(actor);
+    if (!proxy) {
+        zactor_destroy(&actor);
+        morpho_runtimeerror(v, ERROR_ALLOCATIONFAILED);
+        return MORPHO_NIL;
+    }
+
+    value out = morpho_wrapandbind(v, (object *) proxy);
+    if (MORPHO_ISNIL(out)) object_free((object *) proxy);
     return out;
-}
-
-value ZeroMQProxy_setfrontend(vm *v, int nargs, value *args) {
-    objectzeromqproxy *self = ZEROMQ_GETPROXY(MORPHO_SELF(args));
-    char type[ZEROMQ_TYPEBUFFERLENGTH];
-
-    if (zeromq_sockettypefromfn(MORPHO_GETARG(args, 0), type)) {
-        zstr_sendx(self->proxy, "FRONTEND", type, MORPHO_GETCSTRING(MORPHO_GETARG(args, 1)), NULL);
-        zsock_wait(self->proxy);
-        self->frontend=MORPHO_GETARG(args, 1);
-    } else morpho_runtimeerror(v, ZEROMQ_ARGS);
-
-    return MORPHO_NIL;
-}
-
-value ZeroMQProxy_frontend(vm *v, int nargs, value *args) {
-    objectzeromqproxy *self = ZEROMQ_GETPROXY(MORPHO_SELF(args));
-    return self->frontend;
-}
-
-value ZeroMQProxy_setbackend(vm *v, int nargs, value *args) {
-    objectzeromqproxy *self = ZEROMQ_GETPROXY(MORPHO_SELF(args));
-    char type[ZEROMQ_TYPEBUFFERLENGTH];
-
-    if (zeromq_sockettypefromfn(MORPHO_GETARG(args, 0), type)) {
-        zstr_sendx(self->proxy, "BACKEND", type, MORPHO_GETCSTRING(MORPHO_GETARG(args, 1)), NULL);
-        zsock_wait(self->proxy);
-        self->backend=MORPHO_GETARG(args, 1);
-    } else morpho_runtimeerror(v, ZEROMQ_ARGS);
-
-    return MORPHO_NIL;
-}
-
-value ZeroMQProxy_backend(vm *v, int nargs, value *args) {
-    objectzeromqproxy *self = ZEROMQ_GETPROXY(MORPHO_SELF(args));
-    return self->backend;
 }
 
 value ZeroMQProxy_pause(vm *v, int nargs, value *args) {
     objectzeromqproxy *self = ZEROMQ_GETPROXY(MORPHO_SELF(args));
-
-    if (self->proxy) {
-        zstr_sendx(self->proxy, "PAUSE", NULL);
-        zsock_wait(self->proxy);
-    }
-
+    if (self->proxy) zeromq_proxycmd(v, self->proxy, "PAUSE", NULL, NULL);
     return MORPHO_NIL;
 }
 
 value ZeroMQProxy_resume(vm *v, int nargs, value *args) {
     objectzeromqproxy *self = ZEROMQ_GETPROXY(MORPHO_SELF(args));
-
-    if (self->proxy) {
-        zstr_sendx(self->proxy, "RESUME", NULL);
-        zsock_wait(self->proxy);
-    }
-
+    if (self->proxy) zeromq_proxycmd(v, self->proxy, "RESUME", NULL, NULL);
     return MORPHO_NIL;
 }
 
 MORPHO_BEGINCLASS(ZeroMQProxy)
 MORPHO_METHOD_SIGNATURE(ZEROMQ_PAUSE_METHOD, "Nil ()", ZeroMQProxy_pause, ZEROMQ_FN_IOMUT),
-MORPHO_METHOD_SIGNATURE(ZEROMQ_RESUME_METHOD, "Nil ()", ZeroMQProxy_resume, ZEROMQ_FN_IOMUT),
-MORPHO_METHOD_SIGNATURE(ZEROMQ_SETFRONTEND_METHOD, "Nil (_, String)", ZeroMQProxy_setfrontend, ZEROMQ_FN_IOMUT),
-MORPHO_METHOD_SIGNATURE(ZEROMQ_FRONTEND_METHOD, " ()", ZeroMQProxy_frontend, MORPHO_FN_NONE),
-MORPHO_METHOD_SIGNATURE(ZEROMQ_SETBACKEND_METHOD, "Nil (_, String)", ZeroMQProxy_setbackend, ZEROMQ_FN_IOMUT),
-MORPHO_METHOD_SIGNATURE(ZEROMQ_BACKEND_METHOD, " ()", ZeroMQProxy_backend, MORPHO_FN_NONE)
+MORPHO_METHOD_SIGNATURE(ZEROMQ_RESUME_METHOD, "Nil ()", ZeroMQProxy_resume, ZEROMQ_FN_IOMUT)
 MORPHO_ENDCLASS
 
 /* -------------------------------------------------------
@@ -789,7 +791,7 @@ void zeromq_initialize(void) {
 
     value zeromqproxyclass=builtin_addclass(ZEROMQ_PROXYCLASSNAME, MORPHO_GETCLASSDEFINITION(ZeroMQProxy), objclass);
     object_setveneerclass(ZEROMQ_PROXY, zeromqproxyclass);
-    morpho_addfunction(ZEROMQ_PROXYCLASSNAME, ZEROMQ_PROXYCLASSNAME " ()", ZeroMQProxy, ZEROMQ_FN_CONS, NULL);
+    morpho_addfunction(ZEROMQ_PROXYCLASSNAME, ZEROMQ_PROXYCLASSNAME " (_, String, _, String)", ZeroMQProxy, ZEROMQ_FN_CONS, NULL);
 
     morpho_defineerror(ZEROMQ_ARGS, ERROR_HALT, ZEROMQ_ARGS_MSG);
     morpho_defineerror(ZEROMQ_ERR, ERROR_USER, ZEROMQ_ERR_MSG);

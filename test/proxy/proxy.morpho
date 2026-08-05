@@ -1,0 +1,12 @@
+
+import zeromq
+
+var proxy = ZMQProxy(ZMQPull, "inproc://frontend", ZMQPush, "inproc://backend")
+
+var faucet = ZMQPush(">inproc://frontend")
+var sink = ZMQPull(">inproc://backend")
+
+faucet.send("Hello World");
+var msg = sink.receive();
+
+print msg // expect: Hello World

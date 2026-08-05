@@ -1,6 +1,8 @@
-// Hello World client
+// Hello World client (ZGuide Ch.1). Start the server first:
+//   morpho6 examples/zguide/chapter1/HelloWorld/helloworldserver.morpho
+//   morpho6 examples/zguide/chapter1/HelloWorld/helloworldclient.morpho
 
-import zeromq 
+import zeromq
 
 print "[Client] Connecting to hello world server..."
 

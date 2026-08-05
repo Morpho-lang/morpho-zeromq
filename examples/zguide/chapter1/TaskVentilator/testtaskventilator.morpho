@@ -1,0 +1,9 @@
+// Convenience launcher: run from this directory.
+// Prefer starting sink, workers, and vent in separate terminals for demos.
+var nWorkers = 8
+
+system("morpho6 tasksink.morpho &")
+
+for (i in 1..nWorkers) system("morpho6 taskworker.morpho &")
+
+system("morpho6 taskvent.morpho")

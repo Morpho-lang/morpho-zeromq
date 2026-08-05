@@ -1,3 +1,0 @@
-
-system("morpho6 reqrep/client.morpho &")
-system("morpho6 reqrep/server.morpho &")

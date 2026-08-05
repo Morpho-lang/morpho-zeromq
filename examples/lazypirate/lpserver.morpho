@@ -1,5 +1,9 @@
+// Lazy Pirate server (simulates overload, corruption, and crashes).
+// Start this first, then the client:
+//   morpho6 examples/lazypirate/lpserver.morpho
+//   morpho6 examples/lazypirate/lpclient.morpho
 
-import zeromq 
+import zeromq
 
 print "Starting server..."
 

@@ -1,0 +1,13 @@
+// Hello World server (ZGuide Ch.1). Start this first, then the client:
+//   morpho6 examples/zguide/chapter1/HelloWorld/helloworldserver.morpho
+//   morpho6 examples/zguide/chapter1/HelloWorld/helloworldclient.morpho
+
+import zeromq
+
+var responder = ZMQReply("tcp://*:5555")
+
+while (true) {
+    var message = responder.receive() 
+    print "[Server] Received request ${message}"
+    responder.send("World")
+}

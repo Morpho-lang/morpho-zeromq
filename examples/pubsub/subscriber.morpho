@@ -1,5 +1,8 @@
+// PUB/SUB subscriber. Start the publisher first:
+//   morpho6 examples/pubsub/publisher.morpho
+//   morpho6 examples/pubsub/subscriber.morpho
 
-import zeromq 
+import zeromq
 
 print "Starting subscriber..."
 

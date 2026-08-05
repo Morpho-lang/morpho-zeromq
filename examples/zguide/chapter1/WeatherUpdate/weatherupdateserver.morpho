@@ -1,8 +1,10 @@
-// Weather Update Server
+// Weather Update server (ZGuide Ch.1). Start this first, then the client:
+//   morpho6 examples/zguide/chapter1/WeatherUpdate/weatherupdateserver.morpho
+//   morpho6 examples/zguide/chapter1/WeatherUpdate/weatherupdateclient.morpho
 // Binds Publisher socket to tcp://*:5556
 // Publishes random weather updates
 
-import zeromq 
+import zeromq
 
 var publisher = ZMQPublisher("tcp://*:5556")
 

@@ -1,3 +1,0 @@
-
-system("morpho6 lazypirate/lpclient.morpho &")
-system("morpho6 lazypirate/lpserver.morpho &")

@@ -1,3 +1,0 @@
-
-system("morpho6 pubsub/publisher.morpho &")
-system("morpho6 pubsub/subscriber.morpho &")

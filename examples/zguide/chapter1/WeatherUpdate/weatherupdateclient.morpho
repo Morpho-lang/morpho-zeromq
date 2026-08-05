@@ -1,8 +1,10 @@
-// Weather Update Client
+// Weather Update client (ZGuide Ch.1). Start the server first:
+//   morpho6 examples/zguide/chapter1/WeatherUpdate/weatherupdateserver.morpho
+//   morpho6 examples/zguide/chapter1/WeatherUpdate/weatherupdateclient.morpho
 // Connects Subscriber socket to tcp://localhost:5556
 // Collects weather updates and finds avg temp in zipcode
 
-import zeromq 
+import zeromq
 
 print "Collecting updates from weather server..."
 

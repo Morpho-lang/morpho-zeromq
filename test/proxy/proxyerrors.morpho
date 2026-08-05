@@ -1,0 +1,16 @@
+
+import zeromq
+
+try {
+  ZMQProxy(sin, "inproc://a", ZMQPush, "inproc://b")
+  print "should not reach"
+} catch {
+  "ZMQArgs": print "bad ctor" // expect: bad ctor
+}
+
+try {
+  ZMQProxy(ZMQPull, "inproc://a", cos, "inproc://b")
+  print "should not reach"
+} catch {
+  "ZMQArgs": print "bad backend" // expect: bad backend
+}

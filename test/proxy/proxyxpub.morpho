@@ -1,0 +1,17 @@
+
+import zeromq
+
+var proxy = ZMQProxy(ZMQXSubscriber, "inproc://xfront", ZMQXPublisher, "inproc://xback")
+
+var pub = ZMQPublisher(">inproc://xfront")
+var sub = ZMQSubscriber(">inproc://xback", "")
+
+// Slow joiner: subscription must propagate through the proxy
+sub.timeout(50)
+var msg = nil
+for (i in 1..40) {
+  pub.send("hello")
+  msg = sub.receive()
+  if (msg) break
+}
+print msg // expect: hello

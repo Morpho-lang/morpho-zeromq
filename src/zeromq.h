@@ -23,10 +23,6 @@
 #define ZEROMQ_UNBIND_METHOD      "unbind"
 #define ZEROMQ_CONNECT_METHOD     "connect"
 #define ZEROMQ_DISCONNECT_METHOD  "disconnect"
-#define ZEROMQ_SETFRONTEND_METHOD "setfrontend"
-#define ZEROMQ_FRONTEND_METHOD    "frontend"
-#define ZEROMQ_SETBACKEND_METHOD  "setbackend"
-#define ZEROMQ_BACKEND_METHOD     "backend"
 
 #define ZEROMQ_SEND_METHOD        "send"
 #define ZEROMQ_RECEIVE_METHOD     "receive"

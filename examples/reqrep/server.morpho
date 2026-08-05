@@ -1,5 +1,8 @@
+// REQ/REP server. Start this first, then the client:
+//   morpho6 examples/reqrep/server.morpho
+//   morpho6 examples/reqrep/client.morpho
 
-import zeromq 
+import zeromq
 
 print "Starting req/rep server..."
 
