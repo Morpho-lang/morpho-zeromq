@@ -1,0 +1,22 @@
+
+import zeromq
+
+var s = ZMQPair()
+s.bind("inproc://chk")
+var p = ZMQPoller(s)
+
+print p.wait(0) // expect: nil
+
+p.wait(0.0)
+print "float wait ok" // expect: float wait ok
+
+s.timeout(10.5)
+print s.timeout() // expect: 10
+
+s.linger(1.0)
+print s.linger() // expect: 1
+
+s.unbind()
+print s.endpoint() // expect: nil
+s.unbind()
+print "unbind ok" // expect: unbind ok

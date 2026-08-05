@@ -1,0 +1,10 @@
+
+import zeromq
+
+try {
+  var sock = ZMQReply()
+  sock.bind("this is not a valid endpoint")
+  print "should not reach"
+} catch {
+  "ZMQErr": print "caught" // expect: caught
+}

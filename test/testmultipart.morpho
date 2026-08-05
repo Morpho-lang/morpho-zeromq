@@ -1,0 +1,29 @@
+
+import zeromq
+
+var router = ZMQRouter("inproc://multipart")
+var dealer = ZMQDealer()
+dealer.identity("client")
+dealer.connect("inproc://multipart")
+
+dealer.send("Hello")
+var req = router.receive()
+print istuple(req) // expect: true
+print req.count() // expect: 2
+print req[1] // expect: Hello
+
+router.send((req[0], "World"))
+var reply = dealer.receive()
+print reply // expect: World
+
+// List send also works
+dealer.send(["Again"])
+var req2 = router.receive()
+print req2[1] // expect: Again
+
+// Multipart from dealer arrives as a tuple on the router
+dealer.send(("one", "two"))
+var req3 = router.receive()
+print req3.count() // expect: 3
+print req3[1] // expect: one
+print req3[2] // expect: two

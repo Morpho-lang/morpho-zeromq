@@ -8,6 +8,7 @@ var maxretries =  3 // Before we abandon
 var server_endpoint = "tcp://127.0.0.1:5555"
 
 var client = ZMQRequest(server_endpoint)
+client.timeout(requestimeout)
 
 var seq = 0
 var retries_left = maxretries
@@ -15,30 +16,25 @@ var retries_left = maxretries
 while (retries_left>0) {
   seq+=1
   client.send("Hello ${seq}")
-  var expect_reply = true 
 
-  while (expect_reply) {
-    var poller = ZMQPoller(client) 
-    var rcvd = poller.wait(requestimeout)
-
-    if (rcvd==client) {
-      var a = client.receive() 
-      var j = Int(a.split(" ")[1])
-      if (j==seq) {
-        print "C: Server replied ${j} - ok"
-        expect_reply = false 
-        retries_left = maxretries
-      } else print "C: Malformed reply from server '${a}'"
+  var a = client.receive()
+  if (a) {
+    var j = Int(a.split(" ")[1])
+    if (j==seq) {
+      print "C: Server replied ${j} - ok"
+      retries_left = maxretries
+    } else print "C: Malformed reply from server '${a}'"
+  } else {
+    retries_left-=1
+    if (retries_left==0) {
+      print "C: Server offline"
+      break 
     } else {
-      retries_left-=1
-      if (retries_left==0) {
-        print "C: Server offline"
-        break 
-      } else {
-        print "C: Reconnecting to server [${retries_left} tries left]..."
-        client = ZMQRequest(server_endpoint)
-        client.send("Hello ${seq}")
-      }
+      print "C: Reconnecting to server [${retries_left} tries left]..."
+      client.linger(0)
+      client = ZMQRequest(server_endpoint)
+      client.timeout(requestimeout)
+      seq-=1 // retry the same request
     }
   }
 }

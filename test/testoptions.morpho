@@ -1,0 +1,23 @@
+
+import zeromq
+
+var pull = ZMQPull("inproc://options")
+var push = ZMQPush("inproc://options")
+
+print push.timeout() // expect: -1
+
+push.timeout(50)
+print push.timeout() // expect: 50
+
+pull.timeout(50)
+print pull.receive() // expect: nil
+
+push.linger(0)
+print push.linger() // expect: 0
+
+var dealer = ZMQDealer()
+dealer.identity("worker")
+print dealer.identity() // expect: worker
+
+push.unbounded()
+print "ok" // expect: ok

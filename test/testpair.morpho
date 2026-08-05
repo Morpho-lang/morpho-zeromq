@@ -1,0 +1,18 @@
+
+import zeromq
+
+var a = ZMQPair()
+a.bind("inproc://pair-a")
+var b = ZMQPair()
+b.connect("inproc://pair-a")
+
+a.send("ok")
+var m = b.receive()
+print m // expect: ok
+print isstring(m) // expect: true
+
+var p = ZMQPoller(b)
+a.send("ok")
+var ready = p.wait(1000)
+print ready==b // expect: true
+print b.receive() // expect: ok

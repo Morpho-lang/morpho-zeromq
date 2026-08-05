@@ -1,0 +1,21 @@
+
+import zeromq
+
+var a = ZMQPull("inproc://poller-a")
+var b = ZMQPull("inproc://poller-b")
+var poller = ZMQPoller(a)
+poller.add(b)
+
+var pusha = ZMQPush("inproc://poller-a")
+pusha.send("from-a")
+
+var ready = poller.wait(500)
+print ready==a // expect: true
+print ready.receive() // expect: from-a
+
+poller.remove(a)
+var pushb = ZMQPush("inproc://poller-b")
+pushb.send("from-b")
+ready = poller.wait(500)
+print ready==b // expect: true
+print ready.receive() // expect: from-b
