@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.13)
 project(morpho-zeromq)
 
+# Morpho loads plugin symbols (zeromq_initialize) at runtime.
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+
 # Build the library as a plugin
 add_library(zeromq MODULE "")
 
@@ -10,28 +13,46 @@ set_target_properties(zeromq PROPERTIES PREFIX "")
 # Add sources
 add_subdirectory(src)
 
-find_path(MORPHO_INCLUDE_DIR
-    NAMES morpho.h morpho/morpho.h
-    HINTS
-        $ENV{MORPHO_INCLUDE_DIR}
-        /usr/local/opt/morpho/include
-        /opt/homebrew/opt/morpho/include
-        /home/linuxbrew/.linuxbrew/include/morpho
-        /home/linuxbrew/.linuxbrew/include
-        /usr/local/include/morpho
-        /usr/local/include
-        /opt/homebrew/include
+# Locate the morpho.h header file and store in MORPHO_HEADER
+find_file(MORPHO_HEADER
+          morpho.h
+          HINTS
+          /usr/local/opt/morpho
+          /opt/homebrew/opt/morpho
+          /usr/local/include/morpho
+          /opt/homebrew/include/morpho
+          /home/linuxbrew/.linuxbrew/include/morpho
+          "C:/Program Files/Morpho/include/morpho"
+          )
+
+# Identify folder that morpho.h is located in from MORPHO_HEADER and store in MORPHO_INCLUDE
+get_filename_component(MORPHO_INCLUDE ${MORPHO_HEADER} DIRECTORY)
+
+# Add morpho headers to MORPHO_INCLUDE
+target_include_directories(zeromq PUBLIC ${MORPHO_INCLUDE})
+
+# Add general header search paths
+target_include_directories(zeromq PUBLIC
+    /usr/local/include
+    /opt/homebrew/include
+    "C:/Program Files/Morpho/include"
 )
 
+# Add morpho headers in subfolders to MORPHO_INCLUDE
+file(GLOB morpho_subdirectories LIST_DIRECTORIES true ${MORPHO_INCLUDE}/*)
+foreach(dir ${morpho_subdirectories})
+    IF(IS_DIRECTORY ${dir})
+        target_include_directories(zeromq PUBLIC ${dir})
+    ELSE()
+        CONTINUE()
+    ENDIF()
+endforeach()
+
+# Locate libmorpho
 find_library(MORPHO_LIBRARY
     NAMES morpho libmorpho
     HINTS
-        $ENV{MORPHO_LIBRARY}
-        /usr/local/opt/morpho/lib
-        /opt/homebrew/opt/morpho/lib
-        /home/linuxbrew/.linuxbrew/lib
-        /usr/local/lib
-        /opt/homebrew/lib
+    "C:/Program Files/Morpho/lib/"
 )
 
 # Prefer pkg-config for libzmq / libczmq when available
@@ -52,22 +73,8 @@ if(PkgConfig_FOUND)
 endif()
 
 if(NOT ZMQ_FOUND)
-    find_path(ZMQ_INCLUDE_DIRS
-        NAMES zmq.h
-        HINTS
-            $ENV{ZMQ_INCLUDE_DIR}
-            /opt/homebrew/include
-            /usr/local/include
-            /home/linuxbrew/.linuxbrew/include
-    )
-    find_library(ZMQ_LIBRARIES
-        NAMES zmq libzmq
-        HINTS
-            $ENV{ZMQ_LIBRARY}
-            /opt/homebrew/lib
-            /usr/local/lib
-            /home/linuxbrew/.linuxbrew/lib
-    )
+    find_path(ZMQ_INCLUDE_DIRS NAMES zmq.h)
+    find_library(ZMQ_LIBRARIES NAMES zmq libzmq)
     if(ZMQ_INCLUDE_DIRS AND ZMQ_LIBRARIES)
         set(ZMQ_FOUND TRUE)
         set(ZMQ_LINK_LIBS ${ZMQ_LIBRARIES})
@@ -76,40 +83,13 @@ if(NOT ZMQ_FOUND)
 endif()
 
 if(NOT CZMQ_FOUND)
-    find_path(CZMQ_INCLUDE_DIRS
-        NAMES czmq.h
-        HINTS
-            $ENV{CZMQ_INCLUDE_DIR}
-            /opt/homebrew/include
-            /usr/local/include
-            /home/linuxbrew/.linuxbrew/include
-    )
-    find_library(CZMQ_LIBRARIES
-        NAMES czmq libczmq
-        HINTS
-            $ENV{CZMQ_LIBRARY}
-            /opt/homebrew/lib
-            /usr/local/lib
-            /home/linuxbrew/.linuxbrew/lib
-    )
+    find_path(CZMQ_INCLUDE_DIRS NAMES czmq.h)
+    find_library(CZMQ_LIBRARIES NAMES czmq libczmq)
     if(CZMQ_INCLUDE_DIRS AND CZMQ_LIBRARIES)
         set(CZMQ_FOUND TRUE)
         set(CZMQ_LINK_LIBS ${CZMQ_LIBRARIES})
         target_include_directories(zeromq PUBLIC ${CZMQ_INCLUDE_DIRS})
     endif()
-endif()
-
-if(NOT MORPHO_INCLUDE_DIR)
-    message(FATAL_ERROR
-        "Could not find Morpho headers (morpho.h). "
-        "Install Morpho or set MORPHO_INCLUDE_DIR to the include directory "
-        "that contains morpho.h or morpho/morpho.h.")
-endif()
-
-if(NOT MORPHO_LIBRARY)
-    message(FATAL_ERROR
-        "Could not find libmorpho. "
-        "Install Morpho or set MORPHO_LIBRARY to the full path of the Morpho library.")
 endif()
 
 if(NOT ZMQ_FOUND)
@@ -126,27 +106,12 @@ if(NOT CZMQ_FOUND)
         "or set CZMQ_INCLUDE_DIR / CZMQ_LIBRARY.")
 endif()
 
-get_filename_component(MORPHO_INCLUDE_PARENT ${MORPHO_INCLUDE_DIR} DIRECTORY)
-
-# Allow #include <morpho.h>, <classes.h>, etc.
-target_include_directories(zeromq PUBLIC
-    ${MORPHO_INCLUDE_DIR}
-    ${MORPHO_INCLUDE_PARENT}
-)
-
-file(GLOB morpho_subdirectories LIST_DIRECTORIES true ${MORPHO_INCLUDE_DIR}/*)
-foreach(dir ${morpho_subdirectories})
-    if(IS_DIRECTORY ${dir})
-        target_include_directories(zeromq PUBLIC ${dir})
-    endif()
-endforeach()
-
 target_link_libraries(zeromq ${MORPHO_LIBRARY} ${ZMQ_LINK_LIBS} ${CZMQ_LINK_LIBS})
 
-# Install into this package by default (Morpho looks under <package>/lib).
-# Also override CMake's cached /usr/local default so make install can't escape the package.
-if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT OR CMAKE_INSTALL_PREFIX STREQUAL "/usr/local")
-    set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}" CACHE PATH "Install prefix" FORCE)
-endif()
+set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}")
 
-install(TARGETS zeromq LIBRARY DESTINATION lib/)
+# Install the resulting binary. RUNTIME is needed so Windows copies zeromq.dll.
+install(TARGETS zeromq
+    LIBRARY DESTINATION lib/
+    RUNTIME DESTINATION lib/
+)
