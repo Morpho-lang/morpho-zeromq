@@ -77,7 +77,7 @@ Requires Visual Studio 2022 with the ClangCL toolset and a bootstrapped [vcpkg](
 }
 ```
 
-Manifest mode then downloads and builds CZMQ and ZeroMQ on first configure (this may take several minutes) and links them statically into the plugin, so the resulting DLL has no extra ZeroMQ dependencies.
+CMake then downloads and builds CZMQ and ZeroMQ using vcpkg and links them statically into the plugin, so the resulting DLL has no extra ZeroMQ dependencies.
 
     cmake --preset default
     cmake --build build --config Release
