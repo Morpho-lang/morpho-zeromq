@@ -10,6 +10,11 @@ add_library(zeromq MODULE "")
 # Suppress 'lib' prefix
 set_target_properties(zeromq PROPERTIES PREFIX "")
 
+# Use minimal windows headers to avoid conflicts
+if(WIN32)
+    target_compile_definitions(zeromq PRIVATE WIN32_LEAN_AND_MEAN)
+endif()
+
 # Add sources
 add_subdirectory(src)
 
@@ -55,20 +60,34 @@ find_library(MORPHO_LIBRARY
     "C:/Program Files/Morpho/lib/"
 )
 
-# Prefer pkg-config for libzmq / libczmq when available
+# Prefer vcpkg / CMake config packages (Windows), then pkg-config, then find_*
 set(ZMQ_LINK_LIBS "")
 set(CZMQ_LINK_LIBS "")
 
-find_package(PkgConfig QUIET)
-if(PkgConfig_FOUND)
-    pkg_check_modules(ZMQ QUIET IMPORTED_TARGET libzmq)
-    if(ZMQ_FOUND)
-        set(ZMQ_LINK_LIBS PkgConfig::ZMQ)
-    endif()
+find_package(czmq CONFIG QUIET)
+if(czmq_FOUND)
+    set(CZMQ_FOUND TRUE)
+    set(ZMQ_FOUND TRUE)
+    set(CZMQ_LINK_LIBS czmq)
+    message(STATUS "Found czmq via CMake config (libzmq pulled in transitively)")
+endif()
 
-    pkg_check_modules(CZMQ QUIET IMPORTED_TARGET libczmq)
-    if(CZMQ_FOUND)
-        set(CZMQ_LINK_LIBS PkgConfig::CZMQ)
+if(NOT CZMQ_FOUND OR NOT ZMQ_FOUND)
+    find_package(PkgConfig QUIET)
+    if(PkgConfig_FOUND)
+        if(NOT ZMQ_FOUND)
+            pkg_check_modules(ZMQ QUIET IMPORTED_TARGET libzmq)
+            if(ZMQ_FOUND)
+                set(ZMQ_LINK_LIBS PkgConfig::ZMQ)
+            endif()
+        endif()
+
+        if(NOT CZMQ_FOUND)
+            pkg_check_modules(CZMQ QUIET IMPORTED_TARGET libczmq)
+            if(CZMQ_FOUND)
+                set(CZMQ_LINK_LIBS PkgConfig::CZMQ)
+            endif()
+        endif()
     endif()
 endif()
 
@@ -96,6 +115,7 @@ if(NOT ZMQ_FOUND)
     message(FATAL_ERROR
         "Could not find ZeroMQ (libzmq). "
         "Install it (e.g. brew install zeromq / apt install libzmq3-dev) "
+        "or, on Windows, configure with the vcpkg CMake preset "
         "or set ZMQ_INCLUDE_DIR / ZMQ_LIBRARY.")
 endif()
 
@@ -103,6 +123,7 @@ if(NOT CZMQ_FOUND)
     message(FATAL_ERROR
         "Could not find CZMQ (libczmq). "
         "Install it (e.g. brew install czmq / apt install libczmq-dev) "
+        "or, on Windows, configure with the vcpkg CMake preset "
         "or set CZMQ_INCLUDE_DIR / CZMQ_LIBRARY.")
 endif()
 

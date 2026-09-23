@@ -36,12 +36,7 @@ See examples/README.md for a complete list of examples.
 
 ## Manual installation
 
-To install manually, ensure you have CZMQ (and ZeroMQ) installed using:
-
-    brew install czmq              [macOS]
-    apt install libczmq-dev        [ubuntu/WSL]
-
-Then clone this repository onto your computer in any convenient place:
+Clone this repository onto your computer in any convenient place:
 
     git clone https://github.com/morpho-lang/morpho-zeromq.git
 
@@ -50,9 +45,41 @@ then add the location of this repository to your .morphopackages file.
     echo PACKAGEPATH >> ~/.morphopackages 
     where PACKAGEPATH is the location of the git repository.
 
-You need to compile the extension, which you can do by cd'ing to the repository's base folder and typing
+### macOS / Linux
+
+Install CZMQ (and ZeroMQ) using:
+
+    brew install czmq              [macOS]
+    apt install libczmq-dev        [ubuntu/WSL]
+
+Then compile the extension from the repository's base folder:
 
     cmake -S . -B build
+    cmake --build build --config Release
+    cmake --install build --config Release
+
+### Windows
+
+Requires Visual Studio 2022 with the ClangCL toolset and a bootstrapped [vcpkg](https://learn.microsoft.com/en-us/vcpkg/get_started/get-started) (for example at `C:\vcpkg`). Create a local `CMakeUserPresets.json` that points the `vcpkg` preset at your install, e.g.:
+
+```json
+{
+  "version": 2,
+  "configurePresets": [
+    {
+      "name": "default",
+      "inherits": "vcpkg",
+      "environment": {
+        "VCPKG_ROOT": "C:/vcpkg"
+      }
+    }
+  ]
+}
+```
+
+Manifest mode then downloads and builds CZMQ and ZeroMQ on first configure (this may take several minutes) and links them statically into the plugin, so the resulting DLL has no extra ZeroMQ dependencies.
+
+    cmake --preset default
     cmake --build build --config Release
     cmake --install build --config Release
 

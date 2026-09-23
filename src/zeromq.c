@@ -1,11 +1,20 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
+
+#ifdef _WIN32
+/* Morpho's import lib exports data as __imp_* only. lld-link will not
+ * auto-import those without dllimport on the declarations. */
+#define extern __declspec(dllimport) extern
+#endif
 #include <morpho.h>
 #include <classes.h>
+#include "zeromq.h"
+#ifdef _WIN32
+#undef extern
+#endif
 
 #include <czmq.h>
-#include "zeromq.h"
 
 /* -------------------------------------------------------
  * ZeroMQ socket object type
@@ -760,7 +769,7 @@ void zeromq_addsocketconstructor(char *name, builtinfunction fn) {
     morpho_addfunction(name, ZEROMQ_SOCKETCLASSNAME " (String)", fn, ZEROMQ_FN_CONS, NULL);
 }
 
-void zeromq_initialize(void) {
+MORPHO_EXPORT void zeromq_initialize(void) {
     objectzeromqsockettype=object_addtype(&objectzeromqsocketdefn);
     objectzeromqpollertype=object_addtype(&objectzeromqpollerdefn);
     objectzeromqproxytype=object_addtype(&objectzeromqproxydefn);
@@ -797,5 +806,5 @@ void zeromq_initialize(void) {
     morpho_defineerror(ZEROMQ_ERR, ERROR_USER, ZEROMQ_ERR_MSG);
 }
 
-void zeromq_finalize(void) {
+MORPHO_EXPORT void zeromq_finalize(void) {
 }

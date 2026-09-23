@@ -5,3 +5,6 @@ src/.vscode/settings.json
 *.so
 lib/*
 build/*
+CMakeUserPresets.json
+vcpkg_installed/
+
