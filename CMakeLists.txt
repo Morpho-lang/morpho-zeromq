@@ -1,4 +1,16 @@
 cmake_minimum_required(VERSION 3.13)
+
+# Single-config generators (Unix Makefiles, Ninja) default to an empty
+# CMAKE_BUILD_TYPE, which means no -O3. Multi-config generators (Xcode, VS)
+# ignore CMAKE_BUILD_TYPE; --config selects the variant at build time.
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    message(STATUS "CMAKE_BUILD_TYPE unset; defaulting to Release")
+    set(CMAKE_BUILD_TYPE Release CACHE STRING
+        "Build type (Debug, Release, RelWithDebInfo, MinSizeRel)" FORCE)
+    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
+        "Debug" "Release" "RelWithDebInfo" "MinSizeRel")
+endif()
+
 project(morpho-zeromq)
 
 # Morpho loads plugin symbols (zeromq_initialize) at runtime.
@@ -9,6 +21,22 @@ add_library(zeromq MODULE "")
 
 # Suppress 'lib' prefix
 set_target_properties(zeromq PROPERTIES PREFIX "")
+
+#-------------------------------------------------------------------------------
+# Release LTO
+#-------------------------------------------------------------------------------
+
+include(CheckIPOSupported)
+check_ipo_supported(RESULT ZEROMQ_IPO_SUPPORTED OUTPUT ZEROMQ_IPO_OUTPUT LANGUAGES C)
+if(ZEROMQ_IPO_SUPPORTED)
+    set_property(TARGET zeromq PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
+    if(CMAKE_BUILD_TYPE STREQUAL "Release")
+        set_property(TARGET zeromq PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+    endif()
+    message(STATUS "IPO/LTO enabled for Release")
+else()
+    message(STATUS "IPO/LTO not enabled (${ZEROMQ_IPO_OUTPUT})")
+endif()
 
 # Use minimal windows headers to avoid conflicts
 if(WIN32)
