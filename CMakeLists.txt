@@ -1,8 +1,10 @@
+#-------------------------------------------------------------------------------
+# morpho-zeromq/CMakeLists.txt
+#-------------------------------------------------------------------------------
+
 cmake_minimum_required(VERSION 3.13)
 
-# Single-config generators (Unix Makefiles, Ninja) default to an empty
-# CMAKE_BUILD_TYPE, which means no -O3. Multi-config generators (Xcode, VS)
-# ignore CMAKE_BUILD_TYPE; --config selects the variant at build time.
+# Default to a Release build when no build type is set.
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     message(STATUS "CMAKE_BUILD_TYPE unset; defaulting to Release")
     set(CMAKE_BUILD_TYPE Release CACHE STRING
@@ -11,156 +13,93 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
         "Debug" "Release" "RelWithDebInfo" "MinSizeRel")
 endif()
 
-project(morpho-zeromq)
+project(morpho-zeromq LANGUAGES C)
 
-# Morpho loads plugin symbols (zeromq_initialize) at runtime.
-set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
-
-# Build the library as a plugin
+# Build the library as a plugin.
 add_library(zeromq MODULE "")
 
-# Suppress 'lib' prefix
+# Suppress the 'lib' prefix.
 set_target_properties(zeromq PROPERTIES PREFIX "")
+
+# CZMQ includes the Windows socket headers.
+if(WIN32)
+    target_compile_definitions(zeromq PRIVATE WIN32_LEAN_AND_MEAN)
+endif()
 
 #-------------------------------------------------------------------------------
 # Release LTO
 #-------------------------------------------------------------------------------
 
 include(CheckIPOSupported)
-check_ipo_supported(RESULT ZEROMQ_IPO_SUPPORTED OUTPUT ZEROMQ_IPO_OUTPUT LANGUAGES C)
+
+check_ipo_supported(
+    RESULT ZEROMQ_IPO_SUPPORTED
+    OUTPUT ZEROMQ_IPO_OUTPUT
+    LANGUAGES C
+)
+
 if(ZEROMQ_IPO_SUPPORTED)
-    set_property(TARGET zeromq PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
-    if(CMAKE_BUILD_TYPE STREQUAL "Release")
-        set_property(TARGET zeromq PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
-    endif()
+    set_property(TARGET zeromq PROPERTY
+        INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
     message(STATUS "IPO/LTO enabled for Release")
 else()
     message(STATUS "IPO/LTO not enabled (${ZEROMQ_IPO_OUTPUT})")
 endif()
 
-# Use minimal windows headers to avoid conflicts
-if(WIN32)
-    target_compile_definitions(zeromq PRIVATE WIN32_LEAN_AND_MEAN)
-endif()
+#-------------------------------------------------------------------------------
+# Sources
+#-------------------------------------------------------------------------------
 
-# Add sources
 add_subdirectory(src)
 
-# Locate the morpho.h header file and store in MORPHO_HEADER
-find_file(MORPHO_HEADER
-          morpho.h
-          HINTS
-          /usr/local/opt/morpho
-          /opt/homebrew/opt/morpho
-          /usr/local/include/morpho
-          /opt/homebrew/include/morpho
-          /home/linuxbrew/.linuxbrew/include/morpho
-          "C:/Program Files/Morpho/include/morpho"
-          )
+#-------------------------------------------------------------------------------
+# Dependencies
+#-------------------------------------------------------------------------------
 
-# Identify folder that morpho.h is located in from MORPHO_HEADER and store in MORPHO_INCLUDE
-get_filename_component(MORPHO_INCLUDE ${MORPHO_HEADER} DIRECTORY)
+find_package(morpho CONFIG REQUIRED)
 
-# Add morpho headers to MORPHO_INCLUDE
-target_include_directories(zeromq PUBLIC ${MORPHO_INCLUDE})
-
-# Add general header search paths
-target_include_directories(zeromq PUBLIC
-    /usr/local/include
-    /opt/homebrew/include
-    "C:/Program Files/Morpho/include"
-)
-
-# Add morpho headers in subfolders to MORPHO_INCLUDE
-file(GLOB morpho_subdirectories LIST_DIRECTORIES true ${MORPHO_INCLUDE}/*)
-foreach(dir ${morpho_subdirectories})
-    IF(IS_DIRECTORY ${dir})
-        target_include_directories(zeromq PUBLIC ${dir})
-    ELSE()
-        CONTINUE()
-    ENDIF()
-endforeach()
-
-# Locate libmorpho
-find_library(MORPHO_LIBRARY
-    NAMES morpho libmorpho
-    HINTS
-    "C:/Program Files/Morpho/lib/"
-)
-
-# Prefer vcpkg / CMake config packages (Windows), then pkg-config, then find_*
-set(ZMQ_LINK_LIBS "")
-set(CZMQ_LINK_LIBS "")
-
+# The CZMQ CMake package exports `czmq` and pulls ZeroMQ in with it.
+# Homebrew and Debian do not ship that package, so locate both libraries.
 find_package(czmq CONFIG QUIET)
-if(czmq_FOUND)
-    set(CZMQ_FOUND TRUE)
-    set(ZMQ_FOUND TRUE)
-    set(CZMQ_LINK_LIBS czmq)
-    message(STATUS "Found czmq via CMake config (libzmq pulled in transitively)")
-endif()
+if(NOT TARGET czmq)
+    find_path(CZMQ_INCLUDE_DIR NAMES czmq.h)
+    find_library(CZMQ_LIBRARY NAMES czmq libczmq)
+    find_path(ZMQ_INCLUDE_DIR NAMES zmq.h)
+    find_library(ZMQ_LIBRARY NAMES zmq libzmq)
 
-if(NOT CZMQ_FOUND OR NOT ZMQ_FOUND)
-    find_package(PkgConfig QUIET)
-    if(PkgConfig_FOUND)
-        if(NOT ZMQ_FOUND)
-            pkg_check_modules(ZMQ QUIET IMPORTED_TARGET libzmq)
-            if(ZMQ_FOUND)
-                set(ZMQ_LINK_LIBS PkgConfig::ZMQ)
-            endif()
-        endif()
-
-        if(NOT CZMQ_FOUND)
-            pkg_check_modules(CZMQ QUIET IMPORTED_TARGET libczmq)
-            if(CZMQ_FOUND)
-                set(CZMQ_LINK_LIBS PkgConfig::CZMQ)
-            endif()
-        endif()
+    if(NOT CZMQ_INCLUDE_DIR OR NOT CZMQ_LIBRARY
+            OR NOT ZMQ_INCLUDE_DIR OR NOT ZMQ_LIBRARY)
+        message(FATAL_ERROR "Could not find CZMQ and ZeroMQ.")
     endif()
 endif()
 
-if(NOT ZMQ_FOUND)
-    find_path(ZMQ_INCLUDE_DIRS NAMES zmq.h)
-    find_library(ZMQ_LIBRARIES NAMES zmq libzmq)
-    if(ZMQ_INCLUDE_DIRS AND ZMQ_LIBRARIES)
-        set(ZMQ_FOUND TRUE)
-        set(ZMQ_LINK_LIBS ${ZMQ_LIBRARIES})
-        target_include_directories(zeromq PUBLIC ${ZMQ_INCLUDE_DIRS})
-    endif()
+#-------------------------------------------------------------------------------
+# Linking
+#-------------------------------------------------------------------------------
+
+target_link_libraries(zeromq PRIVATE morpho::morpho)
+
+if(TARGET czmq)
+    target_link_libraries(zeromq PRIVATE czmq)
+else()
+    target_include_directories(zeromq PRIVATE
+        ${CZMQ_INCLUDE_DIR}
+        ${ZMQ_INCLUDE_DIR}
+    )
+    target_link_libraries(zeromq PRIVATE ${CZMQ_LIBRARY} ${ZMQ_LIBRARY})
 endif()
 
-if(NOT CZMQ_FOUND)
-    find_path(CZMQ_INCLUDE_DIRS NAMES czmq.h)
-    find_library(CZMQ_LIBRARIES NAMES czmq libczmq)
-    if(CZMQ_INCLUDE_DIRS AND CZMQ_LIBRARIES)
-        set(CZMQ_FOUND TRUE)
-        set(CZMQ_LINK_LIBS ${CZMQ_LIBRARIES})
-        target_include_directories(zeromq PUBLIC ${CZMQ_INCLUDE_DIRS})
-    endif()
+#-------------------------------------------------------------------------------
+# Installation
+#-------------------------------------------------------------------------------
+
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+    set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}"
+        CACHE PATH "Install prefix" FORCE)
 endif()
 
-if(NOT ZMQ_FOUND)
-    message(FATAL_ERROR
-        "Could not find ZeroMQ (libzmq). "
-        "Install it (e.g. brew install zeromq / apt install libzmq3-dev) "
-        "or, on Windows, configure with the vcpkg CMake preset "
-        "or set ZMQ_INCLUDE_DIR / ZMQ_LIBRARY.")
-endif()
-
-if(NOT CZMQ_FOUND)
-    message(FATAL_ERROR
-        "Could not find CZMQ (libczmq). "
-        "Install it (e.g. brew install czmq / apt install libczmq-dev) "
-        "or, on Windows, configure with the vcpkg CMake preset "
-        "or set CZMQ_INCLUDE_DIR / CZMQ_LIBRARY.")
-endif()
-
-target_link_libraries(zeromq ${MORPHO_LIBRARY} ${ZMQ_LINK_LIBS} ${CZMQ_LINK_LIBS})
-
-set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}")
-
-# Install the resulting binary. RUNTIME is needed so Windows copies zeromq.dll.
+# LIBRARY is the Unix plugin; RUNTIME is the Windows DLL. Both land in lib/.
 install(TARGETS zeromq
-    LIBRARY DESTINATION lib/
-    RUNTIME DESTINATION lib/
+    LIBRARY DESTINATION lib
+    RUNTIME DESTINATION lib
 )
