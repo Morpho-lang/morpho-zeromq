@@ -1,4 +1,15 @@
 #!/usr/bin/env python3
+# Simple automated testing (aligned with Morpho's test/test.py)
+#
+# Each input file is supplied to a test command, the results are piped to a
+# file and the output is compared with expectations extracted from comments:
+#
+#   // expect: VALUE          - match a printed line
+#   // expect error 'TAG'     - match an error with that tag
+#                               (also // expect: Error 'TAG' and optional colons)
+#
+# Flags: -c  CI mode (GitHub Actions annotations, non-zero exit on failure)
+#        -m  multi-thread the Morpho VM (-w4); skip files marked [CI:Serial]
 
 import glob
 import os
@@ -7,6 +18,15 @@ import subprocess
 import sys
 from functools import reduce
 import operator
+
+try:
+    from colored import stylize, fg
+except ImportError:
+    def stylize(text, _color=None):
+        return text
+
+    def fg(_name):
+        return None
 
 command = os.environ.get("MORPHO_TEST_COMMAND", "morpho6")
 ext = "morpho"
@@ -19,7 +39,7 @@ def remove_control_characters(text):
 
 
 def simplify_errors(text):
-    return re.sub(r".*[E|e]rror[ :]*'([A-z;a-z]*)'.*", err + r"[\1]", text.rstrip())
+    return re.sub(r".*[E|e]rror[ :]*'([A-Za-z0-9]*)'.*", err + r"[\1]", text.rstrip())
 
 
 def simplify_stacktrace(text):
@@ -31,7 +51,7 @@ def findvalue(text):
 
 
 def finderror(text):
-    return re.findall(r"// Error: '([^']*)'", text)
+    return re.findall(r"//\s*expect:?\s*[Ee]rror:?\s*'([A-Za-z0-9]+)'", text)
 
 
 def iserror(text):
@@ -42,38 +62,44 @@ def isin(text):
     return len(re.findall(r".*in .*", text)) > 0
 
 
+def findexpected(text):
+    tags = finderror(text)
+    if tags:
+        return [err + "[" + tags[0] + "]"]
+    return findvalue(text)
+
+
 def getexpect(filepath):
     with open(filepath, "r", encoding="utf8") as file_object:
         lines = file_object.readlines()
 
-    if lines == []:
+    if not lines:
         return []
 
-    error_tags = reduce(operator.concat, map(finderror, lines), [])
-    values = reduce(operator.concat, map(findvalue, lines), [])
-
-    if error_tags != []:
-        return ["@error[" + error_tags[0] + "]"]
-
-    return values
+    return reduce(operator.concat, map(findexpected, lines), [])
 
 
 def getoutput(outpath):
     with open(outpath, "r", encoding="utf8") as file_object:
         lines = file_object.readlines()
 
-    out = []
-    for line in lines:
-        line = remove_control_characters(line)
-        line = simplify_errors(line)
-        line = simplify_stacktrace(line)
-        out.append(line)
+    lines = list(map(remove_control_characters, lines))
+    lines = list(map(simplify_errors, lines))
+    lines = list(map(simplify_stacktrace, lines))
 
-    for i in range(len(out) - 1):
-        if iserror(out[i]) and isin(out[i + 1]):
-            out[i + 1] = stk
+    for i in range(len(lines) - 1):
+        if iserror(lines[i]) and isin(lines[i + 1]):
+            lines[i + 1] = stk
 
-    return list(filter(lambda x: x != stk, out))
+    return list(filter(lambda x: x != stk, lines))
+
+
+def is_serial_only(filepath):
+    with open(filepath, encoding="utf8") as f:
+        for line in f:
+            if "[CI:Serial]" in line:
+                return True
+    return False
 
 
 def test(file, testlog, ci):
@@ -90,13 +116,14 @@ def test(file, testlog, ci):
     if os.path.exists(tmp):
         out = getoutput(tmp)
 
-        if result.returncode == 0 and expected == out:
+        # Ignore exit code; error tests intentionally exit non-zero
+        if expected == out:
             if not ci:
-                print("Passed")
+                print(stylize("Passed", fg("green")))
             ret = 1
         else:
             if not ci:
-                print("Failed")
+                print(stylize("Failed", fg("red")))
                 print("  Return code: ", result.returncode)
                 print("  Expected: ", expected)
                 print("    Output: ", out)
@@ -149,6 +176,8 @@ os.chdir(script_dir)
 files = sorted(glob.glob("**/*." + ext, recursive=True))
 with open(failed_tests_file_name, "w", encoding="utf8") as testlog:
     for f in files:
+        if mt and is_serial_only(f):
+            continue
         success += test(f, testlog, ci)
         total += 1
 
