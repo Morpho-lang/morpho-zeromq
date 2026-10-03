@@ -21,7 +21,6 @@ add_library(zeromq MODULE "")
 # Suppress the 'lib' prefix.
 set_target_properties(zeromq PROPERTIES PREFIX "")
 
-# CZMQ includes the Windows socket headers.
 if(WIN32)
     target_compile_definitions(zeromq PRIVATE WIN32_LEAN_AND_MEAN)
 endif()
@@ -58,8 +57,7 @@ add_subdirectory(src)
 
 find_package(morpho CONFIG REQUIRED)
 
-# The CZMQ CMake package exports `czmq` and pulls ZeroMQ in with it.
-# Homebrew and Debian do not ship that package, so locate both libraries.
+# Locate both libraries when the CZMQ package is absent.
 find_package(czmq CONFIG QUIET)
 if(NOT TARGET czmq)
     find_path(CZMQ_INCLUDE_DIR NAMES czmq.h)
@@ -98,8 +96,6 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
         CACHE PATH "Install prefix" FORCE)
 endif()
 
-# LIBRARY is the Unix plugin; RUNTIME is the Windows DLL. Both land in lib/.
 install(TARGETS zeromq
     LIBRARY DESTINATION lib
-    RUNTIME DESTINATION lib
 )
