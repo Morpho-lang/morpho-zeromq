@@ -99,3 +99,11 @@ endif()
 install(TARGETS zeromq
     LIBRARY DESTINATION lib
 )
+
+# Install DLLs that sit beside the plugin.
+if(WIN32)
+    install(DIRECTORY "$<TARGET_FILE_DIR:zeromq>/"
+        DESTINATION lib
+        FILES_MATCHING PATTERN "*.dll"
+    )
+endif()
