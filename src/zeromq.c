@@ -2,18 +2,9 @@
 #include <errno.h>
 #include <string.h>
 
-#ifdef _WIN32
-/* Morpho's import lib exports data as __imp_* only. lld-link will not
- * auto-import those without dllimport on the declarations. */
-#define extern __declspec(dllimport) extern
-#endif
 #include <morpho.h>
 #include <classes.h>
 #include "zeromq.h"
-#ifdef _WIN32
-#undef extern
-#endif
-
 #include <czmq.h>
 
 /* -------------------------------------------------------
