@@ -63,13 +63,5 @@
 // Size needed to get a ZMQ type string
 #define ZEROMQ_TYPEBUFFERLENGTH   64
 
-#ifndef MORPHO_EXPORT
-    #ifdef _WIN32
-        #define MORPHO_EXPORT __declspec(dllexport)
-    #else
-        #define MORPHO_EXPORT
-    #endif
-#endif
-
-MORPHO_EXPORT void zeromq_initialize(void);
-MORPHO_EXPORT void zeromq_finalize(void);
+MORPHO_EXTENSION_EXPORT void zeromq_initialize(void);
+MORPHO_EXTENSION_EXPORT void zeromq_finalize(void);

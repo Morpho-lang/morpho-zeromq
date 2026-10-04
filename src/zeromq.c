@@ -760,7 +760,7 @@ void zeromq_addsocketconstructor(char *name, builtinfunction fn) {
     morpho_addfunction(name, ZEROMQ_SOCKETCLASSNAME " (String)", fn, ZEROMQ_FN_CONS, NULL);
 }
 
-MORPHO_EXPORT void zeromq_initialize(void) {
+MORPHO_EXTENSION_EXPORT void zeromq_initialize(void) {
     objectzeromqsockettype=object_addtype(&objectzeromqsocketdefn);
     objectzeromqpollertype=object_addtype(&objectzeromqpollerdefn);
     objectzeromqproxytype=object_addtype(&objectzeromqproxydefn);
@@ -797,5 +797,5 @@ MORPHO_EXPORT void zeromq_initialize(void) {
     morpho_defineerror(ZEROMQ_ERR, ERROR_USER, ZEROMQ_ERR_MSG);
 }
 
-MORPHO_EXPORT void zeromq_finalize(void) {
+MORPHO_EXTENSION_EXPORT void zeromq_finalize(void) {
 }
